@@ -1,0 +1,55 @@
+[
+  { "title": "Stay Alert", "description": "Always be aware of your surroundings.", "icon": "security" },
+  { "title": "Avoid Dark Areas", "description": "Prefer well-lit roads at night.", "icon": "night" },
+  { "title": "Share Location", "description": "Share live location with trusted contacts.", "icon": "location" },
+  { "title": "Emergency Contact", "description": "Keep emergency numbers on speed dial.", "icon": "phone" },
+  { "title": "Trust Your Instincts", "description": "If something feels wrong, leave immediately.", "icon": "security" },
+
+  { "title": "Use Safe Transport", "description": "Prefer verified ride services.", "icon": "car" },
+  { "title": "Avoid Strangers", "description": "Do not share personal info with unknown people.", "icon": "security" },
+  { "title": "Keep Phone Charged", "description": "Always maintain battery above 20%.", "icon": "phone" },
+  { "title": "Stay Connected", "description": "Keep someone informed about your route.", "icon": "phone" },
+  { "title": "Walk Confidently", "description": "Confidence reduces chances of targeting.", "icon": "walk" },
+
+  { "title": "Use Main Roads", "description": "Avoid shortcuts through isolated areas.", "icon": "location" },
+  { "title": "Avoid Distractions", "description": "Do not use phone while walking in unsafe areas.", "icon": "security" },
+  { "title": "Stay in Groups", "description": "Travel with friends when possible.", "icon": "security" },
+  { "title": "Plan Route", "description": "Know your route before leaving.", "icon": "location" },
+  { "title": "Keep SOS Ready", "description": "Always have emergency SOS app ready.", "icon": "phone" },
+
+  { "title": "No Oversharing", "description": "Avoid posting live location on social media.", "icon": "security" },
+  { "title": "Avoid Alcohol Alone", "description": "Do not consume alcohol alone in unknown places.", "icon": "security" },
+  { "title": "Be Visible", "description": "Wear bright clothes at night.", "icon": "night" },
+  { "title": "Secure Bags", "description": "Keep bags close in crowded areas.", "icon": "security" },
+  { "title": "Watch Exits", "description": "Always know emergency exits in buildings.", "icon": "security" },
+
+  { "title": "Taxi Safety", "description": "Verify driver before entering ride.", "icon": "car" },
+  { "title": "Emergency Code", "description": "Set a safety code word with family.", "icon": "phone" },
+  { "title": "Fake Call Trick", "description": "Use fake calls to avoid unsafe situations.", "icon": "phone" },
+  { "title": "Keep Distance", "description": "Maintain safe distance from strangers.", "icon": "security" },
+  { "title": "Avoid Isolation", "description": "Stay in populated areas.", "icon": "location" },
+
+  { "title": "Know Helplines", "description": "Save local emergency helplines.", "icon": "phone" },
+  { "title": "Backup Battery", "description": "Carry power bank for emergencies.", "icon": "phone" },
+  { "title": "Safe Waiting", "description": "Wait inside shops or safe places.", "icon": "location" },
+  { "title": "Avoid Night Walks", "description": "Avoid walking alone at night.", "icon": "night" },
+  { "title": "GPS On", "description": "Keep GPS enabled for tracking.", "icon": "location" },
+
+  { "title": "Be Confident", "description": "Confidence can prevent attacks.", "icon": "security" },
+  { "title": "Avoid Confrontation", "description": "Do not argue with strangers.", "icon": "security" },
+  { "title": "Stay Near Crowd", "description": "Always stay near groups of people.", "icon": "location" },
+  { "title": "Use Headphones Safely", "description": "Keep volume low to stay alert.", "icon": "security" },
+  { "title": "Know Safe Spots", "description": "Identify safe places in your area.", "icon": "location" },
+
+  { "title": "Emergency App", "description": "Install safety apps on phone.", "icon": "phone" },
+  { "title": "Avoid Unknown Lifts", "description": "Do not accept rides from strangers.", "icon": "car" },
+  { "title": "Stay Calm", "description": "Panic reduces decision making.", "icon": "security" },
+  { "title": "Practice Escape Plan", "description": "Know how to react in danger.", "icon": "security" },
+  { "title": "Fake Emergency Call", "description": "Call someone to escape danger.", "icon": "phone" },
+
+  { "title": "Avoid Empty Elevators", "description": "Wait for crowded lifts.", "icon": "security" },
+  { "title": "Know Police Station", "description": "Be aware of nearby police stations.", "icon": "location" },
+  { "title": "Lock Devices", "description": "Keep phone and apps secured.", "icon": "security" },
+  { "title": "Safe Messaging", "description": "Share quick check-in messages.", "icon": "phone" },
+  { "title": "Stay Observant", "description": "Notice people around you.", "icon": "security" }
+]
