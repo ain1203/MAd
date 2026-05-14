@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
@@ -22,12 +22,7 @@ Future<void> main() async {
     // Attempt to load background services safely
     await AndroidAlarmManager.initialize();
     
-    // Load .env but don't block the whole app if it fails
-    try {
-      await dotenv.load(fileName: ".env");
-    } catch (e) {
-      debugPrint("⚠️ Dotenv load failed: $e. Check if .env exists in assets.");
-    }
+
 
     await AwesomeNotifications().initialize(
       null,
