@@ -22,6 +22,7 @@ import 'screens/safety_tips_screen.dart';
 import 'screens/fake_call_screen.dart';
 import 'screens/circle_screen.dart';
 import 'screens/alerts_history_screen.dart';
+import 'screens/safety_bot_screen.dart';
 import 'screens/incoming_call_screen.dart';
 
 Future<void> main() async {
