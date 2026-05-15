@@ -28,17 +28,78 @@ class _CircleScreenState extends State<CircleScreen> {
       final phone = _phoneController.text.trim();
       final relation = _relationController.text.trim();
       
-      // Store in the unified collection
-      await ContactService.addContact(
-        "$name ($relation)", 
-        phone
-      );
+      final fullName = relation.isNotEmpty ? "$name ($relation)" : name;
+
+      await ContactService.addCircleContact(fullName, phone);
       
       _nameController.clear();
       _phoneController.clear();
       _relationController.clear();
       if (mounted) Navigator.pop(context);
     }
+  }
+
+  void _showEditContactSheet(String docId, String initialName, String initialPhone) {
+    final nameCtrl = TextEditingController(text: initialName);
+    final phoneCtrl = TextEditingController(text: initialPhone);
+    final formKey = GlobalKey<FormState>();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
+        ),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          top: 24, left: 24, right: 24,
+        ),
+        child: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Edit Circle Member', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: nameCtrl,
+                decoration: InputDecoration(labelText: 'Name', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                validator: (v) => v!.isEmpty ? 'Enter name' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: phoneCtrl,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(labelText: 'Phone', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                validator: (v) => v!.isEmpty ? 'Enter phone' : null,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6A1B9A),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  onPressed: () {
+                    if (formKey.currentState?.validate() ?? false) {
+                      ContactService.updateCircleContact(docId, nameCtrl.text.trim(), phoneCtrl.text.trim());
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text('Update Member', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showAddContactSheet() {
@@ -89,7 +150,7 @@ class _CircleScreenState extends State<CircleScreen> {
               height: 50,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6A1B9A),
+                  backgroundColor: Theme.of(context).primaryColor,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
@@ -115,9 +176,9 @@ class _CircleScreenState extends State<CircleScreen> {
       keyboardType: inputType,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: const Color(0xFF6A1B9A)),
+        prefixIcon: Icon(icon, color: Theme.of(context).primaryColor),
         filled: true,
-        fillColor: const Color(0xFFF3E5F5).withOpacity(0.5),
+        fillColor: Theme.of(context).primaryColor.withOpacity(0.05),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -131,7 +192,7 @@ class _CircleScreenState extends State<CircleScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF6A1B9A),
+        backgroundColor: Theme.of(context).primaryColor,
         elevation: 0,
         leading: Navigator.canPop(context)
           ? IconButton(
@@ -146,8 +207,12 @@ class _CircleScreenState extends State<CircleScreen> {
         centerTitle: true,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: ContactService.getContactsStream(),
+        stream: ContactService.getCircleStream(),
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+             debugPrint("❌ Circle Stream Error: ${snapshot.error}");
+             return Center(child: Text("Error: ${snapshot.error}"));
+          }
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -202,25 +267,34 @@ class _CircleScreenState extends State<CircleScreen> {
                           children: [
                             Text(
                               name,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w800,
-                                color: Color(0xFF212121),
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                             Text(
                               phone,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
-                                color: Color(0xFF757575),
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                               ),
                             ),
                           ],
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                        onPressed: () => ContactService.deleteContact(doc.id),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined, color: Colors.blue),
+                            onPressed: () => _showEditContactSheet(doc.id, name, phone),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                            onPressed: () => ContactService.deleteCircleContact(doc.id),
+                          ),
+                        ],
                       ),
                     ],
                   ),

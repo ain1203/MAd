@@ -5,7 +5,8 @@ import '../services/firebase_auth_service.dart';
 import '../services/user_session.dart';
 import '../services/alert_service.dart';
 import '../services/contact_service.dart';
-import '../services/theme_service.dart';
+import '../services/theme_provider.dart';
+import '../theme/app_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 
@@ -20,17 +21,7 @@ import 'profile_screen.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 //  SafeHer – Brand tokens
 // ─────────────────────────────────────────────────────────────────────────────
-class SafeHerColors {
-  static const primary = Color(0xFF6A1B9A);
-  static const primaryLight = Color(0xFF9C4DCC);
-  static const primaryDark = Color(0xFF38006B);
-  static const accent = Color(0xFFE040FB);
-  static const sosPink = Color(0xFFEC407A);
-  static const softPurple = Color(0xFFF3E5F5);
-  static const textDark = Color(0xFF212121);
-  static const textMuted = Color(0xFF757575);
-  static const emergencyRed = Color(0xFFE53935);
-}
+
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -231,111 +222,227 @@ class _HomeTabContentState extends State<HomeTabContent>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40, height: 4,
-                    margin: const EdgeInsets.only(bottom: 20),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          top: 24, left: 24, right: 24,
+        ),
+        child: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Add Emergency Contact', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: nameCtrl,
+                decoration: InputDecoration(
+                  labelText: 'Name',
+                  prefixIcon: const Icon(Icons.person_outline),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                validator: (v) => v!.isEmpty ? 'Enter name' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: phoneCtrl,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  labelText: 'Phone Number',
+                  prefixIcon: const Icon(Icons.phone_outlined),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                validator: (v) => v!.isEmpty ? 'Enter phone' : null,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: SafeHerColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
-                ),
-                Row(
-                  children: [
-                    Container(
-                      width: 42, height: 42,
-                      decoration: BoxDecoration(
-                        color: SafeHerColors.softPurple,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.person_add_rounded,
-                          color: SafeHerColors.primary, size: 22),
-                    ),
-                    const SizedBox(width: 12),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Add Emergency Contact',
-                            style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w800,
-                                color: SafeHerColors.textDark)),
-                        Text('They will be alerted on SOS.',
-                            style: TextStyle(
-                                fontSize: 12, color: SafeHerColors.textMuted)),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                _sheetField(
-                  ctrl: nameCtrl,
-                  hint: 'Full name  (e.g. Mom, Sister)',
-                  icon: Icons.person_outline_rounded,
-                  keyboard: TextInputType.name,
-                  caps: TextCapitalization.words,
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Name is required' : null,
-                ),
-                const SizedBox(height: 14),
-                _sheetField(
-                  ctrl: phoneCtrl,
-                  hint: 'Phone number  (e.g. +1 555 000 0000)',
-                  icon: Icons.phone_outlined,
-                  keyboard: TextInputType.phone,
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Phone is required';
-                    if (v.replaceAll(RegExp(r'\D'), '').length < 7) {
-                      return 'Enter a valid phone number';
+                  onPressed: () {
+                    if (formKey.currentState?.validate() ?? false) {
+                      ContactService.addEmergencyContact(
+                        nameCtrl.text.trim(),
+                        phoneCtrl.text.trim(),
+                      );
+                      Navigator.pop(context);
                     }
-                    return null;
                   },
+                  child: const Text('Save Contact', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
-                const SizedBox(height: 28),
-                SizedBox(
-                  height: 50,
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.save_rounded, size: 18),
-                    label: const Text('Save Contact',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: SafeHerColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                      elevation: 4,
-                      shadowColor: SafeHerColors.primary.withOpacity(0.4),
-                    ),
-                    onPressed: () {
-                      if (formKey.currentState?.validate() ?? false) {
-                        ContactService.addContact(
-                          nameCtrl.text.trim(),
-                          phoneCtrl.text.trim(),
-                        );
-                        Navigator.pop(context);
-                      }
-                    },
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showManageContactsSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.only(top: 12),
+        height: MediaQuery.of(context).size.height * 0.6,
+        child: Column(
+          children: [
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+            ),
+            const SizedBox(height: 20),
+            const Text('Manage Emergency Contacts', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: ContactService.getEmergencyStream(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
+                  if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                  final docs = snapshot.data!.docs;
+                  if (docs.isEmpty) return const Center(child: Text('No contacts to manage'));
+
+                  return ListView.builder(
+                    itemCount: docs.length,
+                    itemBuilder: (context, index) {
+                      final data = docs[index].data() as Map<String, dynamic>;
+                      final docId = docs[index].id;
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: SafeHerColors.primary.withOpacity(0.1),
+                          child: Text(data['name']?[0] ?? '?', style: const TextStyle(color: SafeHerColors.primary)),
+                        ),
+                        title: Text(data['name'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text(data['phone'] ?? ''),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit_outlined, color: Colors.blue),
+                              onPressed: () => _showEditContactSheet(docId, data['name'], data['phone']),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, color: Colors.red),
+                              onPressed: () {
+                                _showDeleteConfirmation(docId);
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditContactSheet(String id, String initialName, String initialPhone) {
+    final nameCtrl = TextEditingController(text: initialName);
+    final phoneCtrl = TextEditingController(text: initialPhone);
+    final formKey = GlobalKey<FormState>();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          top: 24, left: 24, right: 24,
+        ),
+        child: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Edit Contact', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: nameCtrl,
+                decoration: InputDecoration(
+                  labelText: 'Name',
+                  prefixIcon: const Icon(Icons.person_outline),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                validator: (v) => v!.isEmpty ? 'Enter name' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: phoneCtrl,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  labelText: 'Phone Number',
+                  prefixIcon: const Icon(Icons.phone_outlined),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                validator: (v) => v!.isEmpty ? 'Enter phone' : null,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: SafeHerColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  onPressed: () {
+                    if (formKey.currentState?.validate() ?? false) {
+                      ContactService.updateEmergencyContact(id, nameCtrl.text.trim(), phoneCtrl.text.trim());
+                      Navigator.pop(context); // Close edit sheet
+                    }
+                  },
+                  child: const Text('Update Contact', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(String id) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Contact'),
+        content: const Text('Are you sure you want to delete this contact?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              ContactService.deleteEmergencyContact(id);
+              Navigator.pop(context);
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
   }
@@ -379,8 +486,8 @@ class _HomeTabContentState extends State<HomeTabContent>
   }
 
   void _showProfileDialog() {
-    final themeService = Provider.of<ThemeService>(context, listen: false);
-    final bool isDark = themeService.isDarkMode;
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final bool isDark = themeProvider.isDarkMode;
 
     showDialog(
       context: context,
@@ -422,7 +529,7 @@ class _HomeTabContentState extends State<HomeTabContent>
               icon: isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
               label: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
               onTap: () {
-                themeService.toggleTheme();
+                themeProvider.toggleTheme();
                 Navigator.pop(context);
               },
             ),
@@ -463,7 +570,7 @@ class _HomeTabContentState extends State<HomeTabContent>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -475,7 +582,11 @@ class _HomeTabContentState extends State<HomeTabContent>
               _buildSosSection(),
               _buildTapHint(),
               _buildQuickActions(),
-              _buildSectionTitle('Emergency Contacts', trailingLabel: 'Edit'),
+              _buildSectionTitle(
+                'Emergency Contacts', 
+                trailingLabel: 'Edit',
+                onTrailingTap: _showManageContactsSheet,
+              ),
               _buildEmergencyContacts(),
               _buildDailyTip(),
             ],
@@ -538,8 +649,8 @@ class _HomeTabContentState extends State<HomeTabContent>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: RadialGradient(colors: [
-                        SafeHerColors.accent.withOpacity(0.25),
-                        SafeHerColors.primary.withOpacity(0.0),
+                        Theme.of(context).primaryColor.withOpacity(0.25),
+                        Theme.of(context).primaryColor.withOpacity(0.0),
                       ]),
                     ),
                   ),
@@ -547,11 +658,15 @@ class _HomeTabContentState extends State<HomeTabContent>
                     width: 145, height: 145,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: const RadialGradient(
-                        colors: [Color(0xFFCE93D8), Color(0xFF6A1B9A), Color(0xFF4A0072)],
+                      gradient: RadialGradient(
+                        colors: [
+                          Theme.of(context).colorScheme.secondary,
+                          Theme.of(context).primaryColor,
+                          Theme.of(context).primaryColorDark,
+                        ],
                       ),
                       boxShadow: [
-                        BoxShadow(color: SafeHerColors.primary.withOpacity(0.55), blurRadius: 30, spreadRadius: 4),
+                        BoxShadow(color: Theme.of(context).primaryColor.withOpacity(0.55), blurRadius: 30, spreadRadius: 4),
                       ],
                     ),
                     child: const Column(
@@ -582,12 +697,12 @@ class _HomeTabContentState extends State<HomeTabContent>
   }
 
   Widget _buildTapHint() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 40),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 40),
       child: Text(
         'Tap and hold in case of emergency. Your location will be shared instantly.',
         textAlign: TextAlign.center,
-        style: TextStyle(color: SafeHerColors.textMuted, fontSize: 13, height: 1.5),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13, height: 1.5),
       ),
     );
   }
@@ -626,15 +741,18 @@ class _HomeTabContentState extends State<HomeTabContent>
     );
   }
 
-  Widget _buildSectionTitle(String title, {String? trailingLabel}) {
+  Widget _buildSectionTitle(String title, {String? trailingLabel, VoidCallback? onTrailingTap}) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface)),
           if (trailingLabel != null)
-            Text(trailingLabel, style: const TextStyle(fontSize: 13, color: SafeHerColors.primary, fontWeight: FontWeight.w600)),
+            GestureDetector(
+              onTap: onTrailingTap,
+              child: Text(trailingLabel, style: TextStyle(fontSize: 13, color: Theme.of(context).primaryColor, fontWeight: FontWeight.w600))
+            ),
         ],
       ),
     );
@@ -644,8 +762,12 @@ class _HomeTabContentState extends State<HomeTabContent>
     return SizedBox(
       height: 94,
       child: StreamBuilder<QuerySnapshot>(
-        stream: ContactService.getContactsStream(),
+        stream: ContactService.getEmergencyStream(),
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            debugPrint("❌ Firestore Stream Error: ${snapshot.error}");
+            return const Center(child: Icon(Icons.error_outline, color: Colors.red, size: 20));
+          }
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Padding(
               padding: EdgeInsets.only(left: 20),
@@ -654,6 +776,14 @@ class _HomeTabContentState extends State<HomeTabContent>
           }
 
           final docs = snapshot.data?.docs ?? [];
+          
+          if (docs.isEmpty) {
+             return ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [_buildAddContactButton()],
+            );
+          }
 
           return ListView(
             scrollDirection: Axis.horizontal,
@@ -683,11 +813,15 @@ class _HomeTabContentState extends State<HomeTabContent>
           children: [
             Container(
               width: 52, height: 52,
-              decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: SafeHerColors.primary.withOpacity(0.4), width: 2), color: SafeHerColors.softPurple),
-              child: const Icon(Icons.add, color: SafeHerColors.primary),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle, 
+                border: Border.all(color: Theme.of(context).primaryColor.withOpacity(0.4), width: 2), 
+                color: Theme.of(context).primaryColor.withOpacity(0.1)
+              ),
+              child: Icon(Icons.add, color: Theme.of(context).primaryColor),
             ),
             const SizedBox(height: 6),
-            const Text('Add', style: TextStyle(fontSize: 12, color: SafeHerColors.textMuted)),
+            Text('Add', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
           ],
         ),
       ),
@@ -705,7 +839,7 @@ class _HomeTabContentState extends State<HomeTabContent>
               child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
                   style: const TextStyle(color: Colors.white))),
           const SizedBox(height: 6),
-          Text(name, style: const TextStyle(fontSize: 12)),
+          Text(name, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8))),
         ],
       ),
     );

@@ -13,14 +13,11 @@ class AlertsHistoryScreen extends StatefulWidget {
 }
 
 class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
-  static const Color _primary       = Color(0xFF6A1B9A);
-  static const Color _bgColor       = Color(0xFFF3E5F5);
-  static const Color _textDark      = Color(0xFF212121);
-  static const Color _textMuted     = Color(0xFF757575);
+  Color get _primary => Theme.of(context).primaryColor;
+  Color get _textDark => Theme.of(context).colorScheme.onSurface;
+  Color get _textMuted => Theme.of(context).colorScheme.onSurface.withOpacity(0.6);
   static const Color _activeRed     = Color(0xFFE53935);
-  static const Color _activeBg      = Color(0xFFFFEBEE);
   static const Color _resolvedGreen = Color(0xFF43A047);
-  static const Color _resolvedBg    = Color(0xFFE8F5E9);
 
   /// Resolves an alert in Firestore
   Future<void> _resolveAlert(String docId) async {
@@ -37,7 +34,7 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: isDark ? Theme.of(context).scaffoldBackgroundColor : _bgColor,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _buildAppBar(),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -49,7 +46,7 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
             return _buildErrorState();
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: _primary));
+            return Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor));
           }
 
           final docs = snapshot.data?.docs ?? [];
@@ -65,7 +62,7 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: _primary,
+      backgroundColor: Theme.of(context).primaryColor,
       elevation: 0,
       centerTitle: true,
       leading: Navigator.canPop(context)
@@ -115,11 +112,11 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
         children: [
-          Expanded(child: _buildStatChip('Active', active, _activeRed, _activeBg)),
+          Expanded(child: _buildStatChip('Active', active, _activeRed, _activeRed.withOpacity(0.1))),
           const SizedBox(width: 12),
-          Expanded(child: _buildStatChip('Resolved', resolved, _resolvedGreen, _resolvedBg)),
+          Expanded(child: _buildStatChip('Resolved', resolved, _resolvedGreen, _resolvedGreen.withOpacity(0.1))),
           const SizedBox(width: 12),
-          Expanded(child: _buildStatChip('Total', total, _primary, const Color(0xFFEDE7F6))),
+          Expanded(child: _buildStatChip('Total', total, Theme.of(context).primaryColor, Theme.of(context).primaryColor.withOpacity(0.1))),
         ],
       ),
     );
@@ -187,7 +184,7 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _textDark)),
+                          Text(name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _textDark)),
                           _buildStatusBadge(isActive),
                         ],
                       ),
@@ -233,7 +230,7 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
       children: [
         Icon(icon, size: 14, color: _textMuted),
         const SizedBox(width: 6),
-        Text(text, style: const TextStyle(fontSize: 12, color: _textMuted)),
+        Text(text, style: TextStyle(fontSize: 12, color: _textMuted)),
       ],
     );
   }
@@ -241,7 +238,10 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
   Widget _buildStatusBadge(bool isActive) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: isActive ? _activeBg : _resolvedBg, borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(
+        color: isActive ? _activeRed.withOpacity(0.1) : _resolvedGreen.withOpacity(0.1), 
+        borderRadius: BorderRadius.circular(8)
+      ),
       child: Text(
         isActive ? 'ACTIVE' : 'RESOLVED', 
         style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: isActive ? _activeRed : _resolvedGreen)
@@ -271,11 +271,11 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.notifications_off_outlined, size: 64, color: _primary),
+          Icon(Icons.notifications_off_outlined, size: 64, color: _primary),
           const SizedBox(height: 16),
           const Text('No alerts found', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          const Text('Real-time alerts will appear here.', style: TextStyle(color: _textMuted)),
+          Text('Real-time alerts will appear here.', style: TextStyle(color: _textMuted)),
         ],
       ),
     );

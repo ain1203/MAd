@@ -35,11 +35,11 @@ class _RegisterScreenState extends State<RegisterScreen>
   int _selectedTab = 1;
 
   // ── Brand constants ─────────────────────────────────────────────────────────
-  static const Color _primary = Color(0xFF6A1B9A);
-  static const Color _primaryLight = Color(0xFF9C4DCC);
-  static const Color _lightAccent = Color(0xFFF3E5F5);
-  static const Color _fieldFill = Color(0xFFF3F3F3);
-  static const Color _subtitleGrey = Color(0xFF757575);
+  Color get _primary => Theme.of(context).primaryColor;
+  Color get _primaryLight => Theme.of(context).primaryColor.withOpacity(0.8);
+  Color get _lightAccent => Theme.of(context).primaryColor.withOpacity(0.1);
+  Color get _fieldFill => Theme.of(context).inputDecorationTheme.fillColor ?? Colors.transparent;
+  Color get _subtitleGrey => Theme.of(context).colorScheme.onSurface.withOpacity(0.6);
   static const double _fieldRadius = 12.0;
 
   @override
@@ -177,10 +177,13 @@ class _RegisterScreenState extends State<RegisterScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const ClampingScrollPhysics(),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: SingleChildScrollView(
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+          ),
           child: Column(
             children: [
               _buildHeroHeader(),
@@ -215,7 +218,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                     color: const Color(0xFFEDE7F6),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: CircularProgressIndicator(color: _primary),
                   ),
                 );
@@ -249,7 +252,7 @@ class _RegisterScreenState extends State<RegisterScreen>
 
           const SizedBox(height: 6),
 
-          const Text(
+          Text(
             'Join a community built on trust and protection.',
             textAlign: TextAlign.center,
             style: TextStyle(
@@ -529,7 +532,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(_fieldRadius),
-        borderSide: const BorderSide(color: _primary, width: 1.5),
+        borderSide: BorderSide(color: _primary, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(_fieldRadius),
@@ -548,7 +551,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     return Container(
       height: 52,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [_primary, _primaryLight],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
@@ -603,8 +606,8 @@ class _RegisterScreenState extends State<RegisterScreen>
     return Row(
       children: [
         Expanded(child: Divider(color: Colors.grey.shade300, thickness: 1)),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
             'Or continue with',
             style: TextStyle(fontSize: 13, color: _subtitleGrey),
@@ -655,12 +658,12 @@ class _RegisterScreenState extends State<RegisterScreen>
     return Center(
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(fontSize: 13, color: _subtitleGrey),
+          style: TextStyle(fontSize: 13, color: _subtitleGrey),
           children: [
             const TextSpan(text: 'Already have an account? '),
             TextSpan(
               text: 'Log in',
-              style: const TextStyle(
+              style: TextStyle(
                 color: _primary,
                 fontWeight: FontWeight.w600,
               ),

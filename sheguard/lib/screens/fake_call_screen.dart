@@ -66,7 +66,7 @@ class _FakeCallScreenState extends State<FakeCallScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Fake call from $_selectedCaller scheduled in $_selectedTimer seconds."),
-          backgroundColor: const Color(0xFF6A1B9A),
+          backgroundColor: Theme.of(context).primaryColor,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -76,9 +76,9 @@ class _FakeCallScreenState extends State<FakeCallScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3E5F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF6A1B9A),
+        backgroundColor: Theme.of(context).primaryColor,
         title: const Text("Fake Call Setup", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
@@ -90,8 +90,8 @@ class _FakeCallScreenState extends State<FakeCallScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Schedule a fake call to exit uncomfortable situations safely.", 
-              style: TextStyle(fontSize: 16, color: Colors.black87, height: 1.5)),
+            Text("Schedule a fake call to exit uncomfortable situations safely.", 
+              style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8), height: 1.5)),
             const SizedBox(height: 32),
             _buildDropdown<String>("Select Caller Identity", _selectedCaller, _callers, (v) => setState(() => _selectedCaller = v!)),
             const SizedBox(height: 24),
@@ -106,7 +106,7 @@ class _FakeCallScreenState extends State<FakeCallScreen> {
                 icon: const Icon(Icons.phone_callback_rounded, color: Colors.white),
                 label: const Text("Schedule Fake Call", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6A1B9A),
+                  backgroundColor: Theme.of(context).primaryColor,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
               ),
@@ -121,11 +121,11 @@ class _FakeCallScreenState extends State<FakeCallScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black54, fontSize: 14)),
+        Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 14)),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade300)),
+          decoration: BoxDecoration(color: Theme.of(context).cardColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: Theme.of(context).dividerColor)),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<T>(
               value: value,

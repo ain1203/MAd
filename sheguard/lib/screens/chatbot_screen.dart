@@ -78,7 +78,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FE),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,7 +87,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             Text('Safety Assistant', style: TextStyle(fontSize: 12, color: Colors.white70)),
           ],
         ),
-        backgroundColor: const Color(0xFF6A1B9A),
+        backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -126,7 +126,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
         decoration: BoxDecoration(
-          color: isUser ? const Color(0xFF6A1B9A) : Colors.white,
+          color: isUser ? Theme.of(context).primaryColor : Theme.of(context).cardColor,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
@@ -144,7 +144,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         child: Text(
           text,
           style: TextStyle(
-            color: isUser ? Colors.white : Colors.black87,
+            color: isUser ? Colors.white : Theme.of(context).colorScheme.onSurface,
             fontSize: 15,
             height: 1.4,
           ),
@@ -180,7 +180,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -195,7 +195,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F3F4),
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(28),
               ),
               child: TextField(
@@ -212,7 +212,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           const SizedBox(width: 12),
           FloatingActionButton.small(
             onPressed: _sendMessage,
-            backgroundColor: const Color(0xFF6A1B9A),
+            backgroundColor: Theme.of(context).primaryColor,
             elevation: 0,
             child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
           ),

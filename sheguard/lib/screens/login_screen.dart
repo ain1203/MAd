@@ -34,10 +34,9 @@ class _LoginScreenState extends State<LoginScreen>
   late final Animation<Offset> _slideAnim;
 
   // ── Brand colours ────────────────────────────────────────────────────────
-  static const Color _primary = Color(0xFF6A1B9A);
-  static const Color _lightAccent = Color(0xFFF3E5F5);
-  static const Color _bgTop = Color(0xFFEDE7F6);
-  static const Color _bgMid = Color(0xFFF8F4FF);
+  Color get _primary => Theme.of(context).primaryColor;
+  Color get _lightAccent => Theme.of(context).primaryColor.withOpacity(0.1);
+  Color get _bgTop => Theme.of(context).scaffoldBackgroundColor;
 
   @override
   void initState() {
@@ -199,12 +198,16 @@ class _LoginScreenState extends State<LoginScreen>
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [_bgTop, _bgMid, Colors.white],
-            stops: [0.0, 0.45, 1.0],
+            colors: [
+              _bgTop, 
+              Theme.of(context).brightness == Brightness.light ? const Color(0xFFF8F4FF) : const Color(0xFF1E1E1E), 
+              Theme.of(context).scaffoldBackgroundColor
+            ],
+            stops: const [0.0, 0.45, 1.0],
           ),
         ),
         child: SafeArea(
@@ -277,7 +280,7 @@ class _LoginScreenState extends State<LoginScreen>
               child: const Icon(Icons.shield, color: Colors.white, size: 22),
             ),
             const SizedBox(width: 9),
-            const Text(
+            Text(
               'SafeHer',
               style: TextStyle(
                 fontSize: 21,
@@ -292,7 +295,7 @@ class _LoginScreenState extends State<LoginScreen>
           width: 38,
           height: 38,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
@@ -302,7 +305,7 @@ class _LoginScreenState extends State<LoginScreen>
               ),
             ],
           ),
-          child: const Icon(
+          child: Icon(
             Icons.help_outline_rounded,
             color: _primary,
             size: 20,
@@ -335,10 +338,10 @@ class _LoginScreenState extends State<LoginScreen>
             height: 110,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFFCE93D8), _primary],
+                colors: [const Color(0xFFCE93D8), _primary],
               ),
               boxShadow: [
                 BoxShadow(
@@ -366,7 +369,7 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                 ],
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.verified_user,
                 color: _primary,
                 size: 17,
@@ -540,7 +543,7 @@ class _LoginScreenState extends State<LoginScreen>
         const Spacer(),
         GestureDetector(
           onTap: _handleForgotPassword,
-          child: const Text(
+          child: Text(
             'Forgot password?',
             style: TextStyle(
               fontSize: 13,

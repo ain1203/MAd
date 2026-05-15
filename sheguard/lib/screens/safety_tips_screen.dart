@@ -73,7 +73,7 @@ class _SafetyTipsScreenState extends State<SafetyTipsScreen> {
 
       // ───────────────── TOP BAR (HomeScreen style) ─────────────────
       appBar: AppBar(
-        backgroundColor: const Color(0xFF6A1B9A),
+        backgroundColor: Theme.of(context).primaryColor,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
