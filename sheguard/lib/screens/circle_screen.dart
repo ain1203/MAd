@@ -1,15 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sheguard/screens/home_screen.dart';
-import 'package:sheguard/screens/alerts_history_screen.dart';
-
-// ───────────────── DATA MODEL ─────────────────
-class Contact {
-  final String name;
-  final String phone;
-  final String relation;
-
-  Contact({required this.name, required this.phone, required this.relation});
-}
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/contact_service.dart';
 
 class CircleScreen extends StatefulWidget {
   const CircleScreen({super.key});
@@ -19,10 +10,6 @@ class CircleScreen extends StatefulWidget {
 }
 
 class _CircleScreenState extends State<CircleScreen> {
-  // Circle is index 2 in the nav bar
-
-  final List<Contact> _contacts = [];
-
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _relationController = TextEditingController();
@@ -35,19 +22,23 @@ class _CircleScreenState extends State<CircleScreen> {
     super.dispose();
   }
 
-  void _addContact() {
+  Future<void> _addContact() async {
     if (_nameController.text.isNotEmpty && _phoneController.text.isNotEmpty) {
-      setState(() {
-        _contacts.add(Contact(
-          name: _nameController.text,
-          phone: _phoneController.text,
-          relation: _relationController.text,
-        ));
-      });
+      final name = _nameController.text.trim();
+      final phone = _phoneController.text.trim();
+      final relation = _relationController.text.trim();
+      
+      // We combine relation into name or handle it as part of the contact data
+      // For this requirement, we'll store name and phone as primary fields
+      await ContactService.addContact(
+        "$name ($relation)", 
+        phone
+      );
+      
       _nameController.clear();
       _phoneController.clear();
       _relationController.clear();
-      Navigator.pop(context);
+      if (mounted) Navigator.pop(context);
     }
   }
 
@@ -136,14 +127,10 @@ class _CircleScreenState extends State<CircleScreen> {
     );
   }
 
-  // ── Bottom Nav — identical to HomeScreen ──────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF3E5F5),
-
-      // ───────────────── APP BAR ─────────────────
       appBar: AppBar(
         backgroundColor: const Color(0xFF6A1B9A),
         elevation: 0,
@@ -155,98 +142,100 @@ class _CircleScreenState extends State<CircleScreen> {
           : null,
         title: const Text(
           "My Circle",
-          style:
-              TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
         ),
         centerTitle: true,
       ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: ContactService.getContactsStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-      // ───────────────── BODY ─────────────────
-      body: _contacts.isEmpty
-          ? const Center(
+          final docs = snapshot.data?.docs ?? [];
+
+          if (docs.isEmpty) {
+            return const Center(
               child: Text(
                 "No contacts added yet",
                 style: TextStyle(color: Colors.black54, fontSize: 15),
               ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 20),
-              itemCount: _contacts.length,
-              itemBuilder: (context, index) {
-                final contact = _contacts[index];
-                return Center(
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 14),
-                    constraints: const BoxConstraints(maxWidth: 500),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 12,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        const CircleAvatar(
-                          backgroundColor: Color(0xFFF3E5F5),
-                          child: Icon(Icons.person,
-                              color: Color(0xFF6A1B9A)),
-                        ),
-                        const SizedBox(width: 15),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                contact.name,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF212121),
-                                ),
-                              ),
-                              Text(
-                                "${contact.relation} • ${contact.phone}",
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: Color(0xFF757575),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline,
-                              color: Colors.redAccent),
-                          onPressed: () {
-                            setState(
-                                () => _contacts.removeAt(index));
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
+            );
+          }
 
-      // ───────────────── FAB ─────────────────
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            itemCount: docs.length,
+            itemBuilder: (context, index) {
+              final doc = docs[index];
+              final data = doc.data() as Map<String, dynamic>;
+              final String name = data['name'] ?? 'No Name';
+              final String phone = data['phone'] ?? 'No Phone';
+
+              return Center(
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 14),
+                  constraints: const BoxConstraints(maxWidth: 500),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      const CircleAvatar(
+                        backgroundColor: Color(0xFFF3E5F5),
+                        child: Icon(Icons.person, color: Color(0xFF6A1B9A)),
+                      ),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF212121),
+                              ),
+                            ),
+                            Text(
+                              phone,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF757575),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                        onPressed: () => ContactService.deleteContact(doc.id),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: const Color(0xFF6A1B9A),
         onPressed: _showAddContactSheet,
-        label: const Text("Add Contact",
-            style: TextStyle(color: Colors.white)),
+        label: const Text("Add Contact", style: TextStyle(color: Colors.white)),
         icon: const Icon(Icons.add, color: Colors.white),
       ),
-
-      // ───────────────── NAV BAR ─────────────────
     );
   }
 }

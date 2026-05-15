@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'incoming_call_screen.dart';
+import '../services/alert_service.dart';
 
 class FakeCallScreen extends StatefulWidget {
   const FakeCallScreen({super.key});
@@ -57,6 +58,9 @@ class _FakeCallScreenState extends State<FakeCallScreen> {
         repeats: false,
       ),
     );
+
+    // Trigger the unified emergency alert for Fake Call
+    AlertService.sendAlert("FAKE_CALL");
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

@@ -1,36 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  AlertModel
-// ─────────────────────────────────────────────────────────────────────────────
-class AlertModel {
-  final String id;
-  final String alertType;   // e.g. 'SOS', 'FAKE_CALL', 'LOCATION_SHARE'
-  final String timestamp;
-  final String location;
-  final bool isActive;
-
-  const AlertModel({
-    required this.id,
-    required this.alertType,
-    required this.timestamp,
-    required this.location,
-    required this.isActive,
-  });
-
-  factory AlertModel.fromMap(Map<String, dynamic> map) {
-    return AlertModel(
-      id: map['id'] as String,
-      alertType: map['alertType'] as String,
-      timestamp: map['timestamp'] as String,
-      location: map['location'] as String,
-      isActive: map['isActive'] as bool,
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  AlertsHistoryScreen
+//  AlertsHistoryScreen (Firebase Management Dashboard)
 // ─────────────────────────────────────────────────────────────────────────────
 class AlertsHistoryScreen extends StatefulWidget {
   const AlertsHistoryScreen({super.key});
@@ -49,69 +22,14 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
   static const Color _resolvedGreen = Color(0xFF43A047);
   static const Color _resolvedBg    = Color(0xFFE8F5E9);
 
-  final List<AlertModel> _alerts = const [
-    AlertModel(
-      id: 'alert_001',
-      alertType: 'SOS',
-      timestamp: 'Today, 11:42 PM',
-      location: '23 Maple Street, Downtown',
-      isActive: true,
-    ),
-    AlertModel(
-      id: 'alert_002',
-      alertType: 'SOS',
-      timestamp: 'Yesterday, 08:15 AM',
-      location: 'Central Park, North Entrance',
-      isActive: false,
-    ),
-    AlertModel(
-      id: 'alert_003',
-      alertType: 'FAKE_CALL',
-      timestamp: 'May 10, 2026 – 06:55 PM',
-      location: 'Westfield Shopping Centre',
-      isActive: false,
-    ),
-    AlertModel(
-      id: 'alert_004',
-      alertType: 'SOS',
-      timestamp: 'May 8, 2026 – 02:30 AM',
-      location: '7th Ave & W 34th St, Midtown',
-      isActive: true,
-    ),
-  ];
-
-  bool _isRefreshing = false;
-
-  Future<void> _refreshAlerts() async {
-    setState(() => _isRefreshing = true);
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (mounted) setState(() => _isRefreshing = false);
-  }
-
-  _AlertMeta _metaFor(AlertModel alert) {
-    switch (alert.alertType) {
-      case 'FAKE_CALL':
-        return const _AlertMeta(
-          icon: Icons.phone_in_talk_rounded,
-          iconColor: Color(0xFF1565C0),
-          iconBg: Color(0xFFE3F2FD),
-          title: 'Fake Call Triggered',
-        );
-      case 'LOCATION_SHARE':
-        return const _AlertMeta(
-          icon: Icons.location_on_rounded,
-          iconColor: Color(0xFF2E7D32),
-          iconBg: Color(0xFFE8F5E9),
-          title: 'Location Shared',
-        );
-      case 'SOS':
-      default:
-        return const _AlertMeta(
-          icon: Icons.warning_amber_rounded,
-          iconColor: _activeRed,
-          iconBg: Color(0xFFFFEBEE),
-          title: 'Emergency SOS Triggered',
-        );
+  /// Resolves an alert in Firestore
+  Future<void> _resolveAlert(String docId) async {
+    try {
+      await FirebaseFirestore.instance.collection('alerts').doc(docId).update({
+        'status': 'resolved',
+      });
+    } catch (e) {
+      debugPrint("Error resolving alert: $e");
     }
   }
 
@@ -120,10 +38,26 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
     return Scaffold(
       backgroundColor: _bgColor,
       appBar: _buildAppBar(),
-      body: RefreshIndicator(
-        color: _primary,
-        onRefresh: _refreshAlerts,
-        child: _alerts.isEmpty ? _buildEmptyState() : _buildList(),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('alerts')
+            .orderBy('timestamp', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return _buildErrorState();
+          }
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: _primary));
+          }
+
+          final docs = snapshot.data?.docs ?? [];
+          if (docs.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          return _buildDashboard(docs);
+        },
       ),
     );
   }
@@ -140,26 +74,9 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
             )
           : null,
       title: const Text(
-        'Alert History',
+        'Alert Management',
         style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
       ),
-      actions: [
-        if (_alerts.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text('${_alerts.length} total',
-                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
-              ),
-            ),
-          ),
-      ],
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(18),
         child: Container(
@@ -173,21 +90,26 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
     );
   }
 
-  Widget _buildList() {
-    final activeCount   = _alerts.where((a) => a.isActive).length;
-    final resolvedCount = _alerts.where((a) => !a.isActive).length;
+  Widget _buildDashboard(List<QueryDocumentSnapshot> docs) {
+    // Calculate stats
+    int total = docs.length;
+    int active = docs.where((d) => (d.data() as Map<String, dynamic>)['status'] == 'active').length;
+    int resolved = total - active;
 
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
-      itemCount: _alerts.length + 1,
+      itemCount: docs.length + 1,
       itemBuilder: (context, index) {
-        if (index == 0) return _buildStatsRow(activeCount, resolvedCount);
-        return _buildAlertCard(_alerts[index - 1]);
+        if (index == 0) return _buildStatsRow(total, active, resolved);
+        
+        final doc = docs[index - 1];
+        final data = doc.data() as Map<String, dynamic>;
+        return _buildAlertCard(doc.id, data);
       },
     );
   }
 
-  Widget _buildStatsRow(int active, int resolved) {
+  Widget _buildStatsRow(int total, int active, int resolved) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
@@ -196,7 +118,7 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
           const SizedBox(width: 12),
           Expanded(child: _buildStatChip('Resolved', resolved, _resolvedGreen, _resolvedBg)),
           const SizedBox(width: 12),
-          Expanded(child: _buildStatChip('Total', active + resolved, _primary, const Color(0xFFEDE7F6))),
+          Expanded(child: _buildStatChip('Total', total, _primary, const Color(0xFFEDE7F6))),
         ],
       ),
     );
@@ -216,39 +138,81 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
     );
   }
 
-  Widget _buildAlertCard(AlertModel alert) {
-    final meta = _metaFor(alert);
+  Widget _buildAlertCard(String id, Map<String, dynamic> data) {
+    final String type = data['type'] ?? 'SOS';
+    final String name = data['userName'] ?? 'Unknown User';
+    final String status = data['status'] ?? 'active';
+    final double lat = (data['lat'] as num?)?.toDouble() ?? 0.0;
+    final double lng = (data['lng'] as num?)?.toDouble() ?? 0.0;
+    final Timestamp? ts = data['timestamp'] as Timestamp?;
+    
+    final String timeStr = ts != null 
+        ? DateFormat('MMM d, h:mm a').format(ts.toDate()) 
+        : 'Recently';
+
+    final bool isActive = status == 'active';
+    final meta = _getMeta(type);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
           children: [
-            CircleAvatar(radius: 24, backgroundColor: meta.iconBg, child: Icon(meta.icon, color: meta.iconColor, size: 24)),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 22, 
+                  backgroundColor: meta.iconBg, 
+                  child: Icon(meta.icon, color: meta.iconColor, size: 22)
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(child: Text(meta.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _textDark, height: 1.3))),
-                      const SizedBox(width: 8),
-                      _buildStatusBadge(alert.isActive),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _textDark)),
+                          _buildStatusBadge(isActive),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(meta.title, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: meta.iconColor)),
+                      const SizedBox(height: 8),
+                      _infoRow(Icons.access_time_rounded, timeStr),
+                      const SizedBox(height: 4),
+                      _infoRow(Icons.location_on_outlined, "${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}"),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  Text(alert.timestamp, style: const TextStyle(fontSize: 13, color: _textMuted)),
-                  const SizedBox(height: 4),
-                  Text(alert.location, style: const TextStyle(fontSize: 13, color: _textMuted), overflow: TextOverflow.ellipsis),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton(
+                onPressed: isActive ? () => _resolveAlert(id) : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isActive ? _primary : Colors.grey.shade100,
+                  foregroundColor: isActive ? Colors.white : _textMuted,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text(
+                  isActive ? "Mark as Resolved" : "Alert Resolved",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ],
@@ -257,11 +221,41 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
     );
   }
 
+  Widget _infoRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: _textMuted),
+        const SizedBox(width: 6),
+        Text(text, style: const TextStyle(fontSize: 12, color: _textMuted)),
+      ],
+    );
+  }
+
   Widget _buildStatusBadge(bool isActive) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(color: isActive ? _activeBg : _resolvedBg, borderRadius: BorderRadius.circular(8)),
-      child: Text(isActive ? 'ACTIVE' : 'RESOLVED', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: isActive ? _activeRed : _resolvedGreen)),
+      child: Text(
+        isActive ? 'ACTIVE' : 'RESOLVED', 
+        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: isActive ? _activeRed : _resolvedGreen)
+      ),
+    );
+  }
+
+  _AlertMeta _getMeta(String type) {
+    if (type == 'FAKE_CALL') {
+      return const _AlertMeta(
+        icon: Icons.phone_callback_rounded,
+        iconColor: Color(0xFF1565C0),
+        iconBg: Color(0xFFE3F2FD),
+        title: 'Fake Call Triggered',
+      );
+    }
+    return const _AlertMeta(
+      icon: Icons.warning_amber_rounded,
+      iconColor: _activeRed,
+      iconBg: Color(0xFFFFEBEE),
+      title: 'Emergency SOS Triggered',
     );
   }
 
@@ -272,14 +266,16 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
         children: [
           const Icon(Icons.notifications_off_outlined, size: 64, color: _primary),
           const SizedBox(height: 16),
-          const Text('No alerts recorded', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('No alerts found', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          const Text('Your activity will appear here.', style: TextStyle(color: _textMuted)),
-          const SizedBox(height: 24),
-          ElevatedButton(onPressed: _refreshAlerts, child: const Text('Refresh')),
+          const Text('Real-time alerts will appear here.', style: TextStyle(color: _textMuted)),
         ],
       ),
     );
+  }
+
+  Widget _buildErrorState() {
+    return const Center(child: Text("Error loading alerts. Check permissions."));
   }
 }
 

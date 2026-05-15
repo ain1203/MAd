@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/user_session.dart';
+import '../services/alert_service.dart';
+import '../services/contact_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Import all screens
 import 'chatbot_screen.dart';
@@ -131,7 +134,7 @@ class _HomeTabContentState extends State<HomeTabContent>
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
-  final List<EmergencyContact> _contacts = [];
+  // Replaced local list with Firestore stream
 
   static const List<Color> _palette = [
     Color(0xFF7B1FA2),
@@ -173,6 +176,8 @@ class _HomeTabContentState extends State<HomeTabContent>
           _sosHolding = false;
           t.cancel();
           HapticFeedback.heavyImpact();
+          // Trigger the unified emergency alert
+          AlertService.sendAlert("SOS");
           _showSosDialog();
         }
       });
@@ -315,13 +320,10 @@ class _HomeTabContentState extends State<HomeTabContent>
                     ),
                     onPressed: () {
                       if (formKey.currentState?.validate() ?? false) {
-                        setState(() {
-                          _contacts.add(EmergencyContact(
-                            name: nameCtrl.text.trim(),
-                            phone: phoneCtrl.text.trim(),
-                            avatarColor: _palette[_contacts.length % _palette.length],
-                          ));
-                        });
+                        ContactService.addContact(
+                          nameCtrl.text.trim(),
+                          phoneCtrl.text.trim(),
+                        );
                         Navigator.pop(context);
                       }
                     },
@@ -628,13 +630,33 @@ class _HomeTabContentState extends State<HomeTabContent>
   Widget _buildEmergencyContacts() {
     return SizedBox(
       height: 94,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        children: [
-          _buildAddContactButton(),
-          ..._contacts.asMap().entries.map((e) => _buildContactAvatar(e.value, e.key)),
-        ],
+      child: StreamBuilder<QuerySnapshot>(
+        stream: ContactService.getContactsStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Padding(
+              padding: EdgeInsets.only(left: 20),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            );
+          }
+
+          final docs = snapshot.data?.docs ?? [];
+
+          return ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
+              _buildAddContactButton(),
+              ...docs.asMap().entries.map((entry) {
+                final data = entry.value.data() as Map<String, dynamic>;
+                return _buildContactAvatar(
+                  data['name'] ?? 'User',
+                  _palette[entry.key % _palette.length],
+                );
+              }),
+            ],
+          );
+        },
       ),
     );
   }
@@ -659,14 +681,18 @@ class _HomeTabContentState extends State<HomeTabContent>
     );
   }
 
-  Widget _buildContactAvatar(EmergencyContact contact, int index) {
+  Widget _buildContactAvatar(String name, Color color) {
     return Padding(
       padding: const EdgeInsets.only(right: 16),
       child: Column(
         children: [
-          CircleAvatar(radius: 26, backgroundColor: contact.avatarColor, child: Text(contact.name[0].toUpperCase(), style: const TextStyle(color: Colors.white))),
+          CircleAvatar(
+              radius: 26,
+              backgroundColor: color,
+              child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
+                  style: const TextStyle(color: Colors.white))),
           const SizedBox(height: 6),
-          Text(contact.name, style: const TextStyle(fontSize: 12)),
+          Text(name, style: const TextStyle(fontSize: 12)),
         ],
       ),
     );
