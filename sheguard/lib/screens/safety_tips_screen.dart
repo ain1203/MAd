@@ -69,7 +69,7 @@ class _SafetyTipsScreenState extends State<SafetyTipsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3E5F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
 
       // ───────────────── TOP BAR (HomeScreen style) ─────────────────
       appBar: AppBar(
@@ -126,11 +126,11 @@ class _SafetyTipsScreenState extends State<SafetyTipsScreen> {
                     constraints: const BoxConstraints(maxWidth: 500),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(18),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
+                          color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.08),
                           blurRadius: 12,
                           offset: const Offset(0, 5),
                         ),
@@ -142,12 +142,12 @@ class _SafetyTipsScreenState extends State<SafetyTipsScreen> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF3E5F5),
+                            color: Theme.of(context).primaryColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(
                             getIcon(tip.icon),
-                            color: const Color(0xFF6A1B9A),
+                            color: Theme.of(context).primaryColor,
                           ),
                         ),
                         const SizedBox(width: 12),

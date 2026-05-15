@@ -28,8 +28,7 @@ class _CircleScreenState extends State<CircleScreen> {
       final phone = _phoneController.text.trim();
       final relation = _relationController.text.trim();
       
-      // We combine relation into name or handle it as part of the contact data
-      // For this requirement, we'll store name and phone as primary fields
+      // Store in the unified collection
       await ContactService.addContact(
         "$name ($relation)", 
         phone
@@ -130,7 +129,7 @@ class _CircleScreenState extends State<CircleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3E5F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: const Color(0xFF6A1B9A),
         elevation: 0,
@@ -174,27 +173,28 @@ class _CircleScreenState extends State<CircleScreen> {
               final String phone = data['phone'] ?? 'No Phone';
 
               return Center(
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 14),
-                  constraints: const BoxConstraints(maxWidth: 500),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 12,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      const CircleAvatar(
-                        backgroundColor: Color(0xFFF3E5F5),
-                        child: Icon(Icons.person, color: Color(0xFF6A1B9A)),
-                      ),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 14),
+                    constraints: const BoxConstraints(maxWidth: 500),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.08),
+                          blurRadius: 12,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                          child: Icon(Icons.person,
+                              color: Theme.of(context).primaryColor),
+                        ),
                       const SizedBox(width: 15),
                       Expanded(
                         child: Column(

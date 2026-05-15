@@ -8,6 +8,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 // Services
 import 'services/firebase_auth_service.dart';
 import 'services/user_session.dart';
+import 'services/theme_service.dart';
+import 'package:provider/provider.dart';
 
 // Screens
 import 'screens/splash_screen.dart';
@@ -60,7 +62,12 @@ Future<void> main() async {
     debugPrint("🚨 Initialization error: $e");
   }
 
-  runApp(const SafeHerApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeService(),
+      child: const SafeHerApp(),
+    ),
+  );
 }
 
 class SafeHerApp extends StatelessWidget {
@@ -70,16 +77,33 @@ class SafeHerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeService = Provider.of<ThemeService>(context);
+
     return MaterialApp(
       navigatorKey: navigatorKey,
       title: 'SafeHer',
       debugShowCheckedModeBanner: false,
+      themeMode: themeService.themeMode,
       theme: ThemeData(
         primaryColor: const Color(0xFF6A1B9A),
+        scaffoldBackgroundColor: Colors.white,
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF6A1B9A),
           primary: const Color(0xFF6A1B9A),
           secondary: const Color(0xFFF3E5F5),
+          brightness: Brightness.light,
+        ),
+        useMaterial3: true,
+      ),
+      darkTheme: ThemeData(
+        primaryColor: const Color(0xFF9C27B0),
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF6A1B9A),
+          primary: const Color(0xFFCE93D8),
+          secondary: const Color(0xFF4A148C),
+          brightness: Brightness.dark,
+          surface: const Color(0xFF1E1E1E),
         ),
         useMaterial3: true,
       ),

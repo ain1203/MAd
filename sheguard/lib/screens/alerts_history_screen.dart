@@ -35,8 +35,9 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: _bgColor,
+      backgroundColor: isDark ? Theme.of(context).scaffoldBackgroundColor : _bgColor,
       appBar: _buildAppBar(),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -81,9 +82,9 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
         preferredSize: const Size.fromHeight(18),
         child: Container(
           height: 18,
-          decoration: const BoxDecoration(
-            color: _bgColor,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
         ),
       ),
@@ -156,9 +157,15 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(18),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),

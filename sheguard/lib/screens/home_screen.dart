@@ -5,7 +5,9 @@ import '../services/firebase_auth_service.dart';
 import '../services/user_session.dart';
 import '../services/alert_service.dart';
 import '../services/contact_service.dart';
+import '../services/theme_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 
 // Import all screens
 import 'chatbot_screen.dart';
@@ -13,6 +15,7 @@ import 'circle_screen.dart';
 import 'alerts_history_screen.dart';
 import 'safety_tips_screen.dart';
 import 'fake_call_screen.dart';
+import 'profile_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  SafeHer – Brand tokens
@@ -376,71 +379,84 @@ class _HomeTabContentState extends State<HomeTabContent>
   }
 
   void _showProfileDialog() {
+    final themeService = Provider.of<ThemeService>(context, listen: false);
+    final bool isDark = themeService.isDarkMode;
+
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircleAvatar(
-                radius: 40,
-                backgroundColor: SafeHerColors.primaryLight,
-                backgroundImage: UserSession.profileImageUrl != null
-                    ? NetworkImage(UserSession.profileImageUrl!)
-                    : null,
-                child: UserSession.profileImageUrl == null
-                    ? Text(UserSession.displayName[0].toUpperCase(),
-                        style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold))
-                    : null,
-              ),
-              const SizedBox(height: 16),
-              Text(UserSession.displayName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 4),
-              Text(UserSession.email, style: const TextStyle(fontSize: 13, color: SafeHerColors.textMuted)),
-              const SizedBox(height: 24),
-              ListTile(
-                leading: const Icon(Icons.person_outline, color: SafeHerColors.primary),
-                title: const Text('My Profile', style: TextStyle(fontSize: 14)),
-                onTap: () {
-                   Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.security_outlined, color: SafeHerColors.primary),
-                title: const Text('Safety Tips', style: TextStyle(fontSize: 14)),
-                onTap: () {
-                   Navigator.pop(context);
-                   Navigator.push(context, MaterialPageRoute(builder: (_) => const SafetyTipsScreen()));
-                },
-              ),
-              const Divider(),
-              ListTile(
-                leading: const Icon(Icons.logout_rounded, color: SafeHerColors.emergencyRed),
-                title: const Text('Logout', style: TextStyle(color: SafeHerColors.emergencyRed, fontSize: 14)),
-                onTap: () async {
-                  await FirebaseAuthService().signOut();
-                  UserSession.clearSession();
-                  if (!mounted) return;
-                  
-                  // Pop the dialog
-                  Navigator.pop(context);
-                  
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Logged out successfully'),
-                      backgroundColor: SafeHerColors.primary,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                  // Note: AuthWrapper in main.dart handles the navigation back to LoginScreen
-                },
-              ),
-            ],
-          ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Theme.of(context).cardColor,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            CircleAvatar(
+              radius: 44,
+              backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+              backgroundImage: UserSession.profileImageUrl != null
+                  ? NetworkImage(UserSession.profileImageUrl!)
+                  : null,
+              child: UserSession.profileImageUrl == null
+                  ? Text(UserSession.displayName[0].toUpperCase(),
+                      style: TextStyle(color: Theme.of(context).primaryColor, fontSize: 32, fontWeight: FontWeight.bold))
+                  : null,
+            ),
+            const SizedBox(height: 16),
+            Text(UserSession.displayName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+            Text(UserSession.email, style: const TextStyle(fontSize: 13, color: SafeHerColors.textMuted)),
+            const SizedBox(height: 24),
+            
+            // My Profile Button
+            _profileAction(
+              icon: Icons.person_outline_rounded,
+              label: 'My Profile',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+              },
+            ),
+            
+            // Theme Toggle
+            _profileAction(
+              icon: isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+              label: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+              onTap: () {
+                themeService.toggleTheme();
+                Navigator.pop(context);
+              },
+            ),
+            
+            const Divider(height: 32),
+            
+            // Logout Button
+            _profileAction(
+              icon: Icons.logout_rounded,
+              label: 'Logout',
+              color: SafeHerColors.emergencyRed,
+              onTap: () async {
+                await FirebaseAuthService().signOut();
+                UserSession.clearSession();
+                if (!mounted) return;
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Logged out successfully'), backgroundColor: SafeHerColors.primary),
+                );
+              },
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _profileAction({required IconData icon, required String label, required VoidCallback onTap, Color? color}) {
+    return ListTile(
+      leading: Icon(icon, color: color ?? Theme.of(context).primaryColor, size: 22),
+      title: Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: color)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+      onTap: onTap,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
 
@@ -580,16 +596,13 @@ class _HomeTabContentState extends State<HomeTabContent>
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _quickActionItem(Icons.phone_callback_rounded, 'Fake Call', Colors.blue, () {
              Navigator.push(context, MaterialPageRoute(builder: (_) => const FakeCallScreen()));
           }),
           _quickActionItem(Icons.shield_outlined, 'Safety Tips', Colors.orange, () {
              Navigator.push(context, MaterialPageRoute(builder: (_) => const SafetyTipsScreen()));
-          }),
-          _quickActionItem(Icons.chat_bubble_outline_rounded, 'Chatbot', Colors.green, () {
-             Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatbotScreen()));
           }),
         ],
       ),
