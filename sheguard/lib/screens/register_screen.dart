@@ -1,5 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import '../services/firebase_auth_service.dart';
+import '../services/user_session.dart';
 import 'home_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -7,7 +9,8 @@ import 'home_screen.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  final VoidCallback? onToggle;
+  const RegisterScreen({super.key, this.onToggle});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -53,14 +56,14 @@ class _RegisterScreenState extends State<RegisterScreen>
   void _onTabChanged(int index) {
     if (_selectedTab == index) return;
     setState(() => _selectedTab = index);
-    if (index == 0) {
-      Navigator.pushReplacementNamed(context, '/login');
+    if (index == 0 && widget.onToggle != null) {
+      widget.onToggle!();
     }
   }
 
   // ── Actions ─────────────────────────────────────────────────────────────────
 
-  /// Validates the form, shows a loading state, then navigates to HomeScreen.
+  /// Validates the form, shows a loading state, then creates an account with Firebase.
   Future<void> _onCreateAccount() async {
     // Dismiss keyboard
     FocusScope.of(context).unfocus();
@@ -69,39 +72,69 @@ class _RegisterScreenState extends State<RegisterScreen>
 
     setState(() => _isLoading = true);
 
-    // TODO: replace with your real auth service call
-    await Future.delayed(const Duration(milliseconds: 1200));
+    try {
+      // 1. Create account (Firebase signs them in automatically)
+      final result = await FirebaseAuthService().signUpWithEmail(
+        email: _emailController.text,
+        password: _passwordController.text,
+        fullName: _fullNameController.text,
+        phone: _phoneController.text,
+      );
+      
+      if (!mounted) return;
 
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    // Navigate to HomeScreen, removing the entire auth stack so the user
-    // cannot press Back to return to registration.
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (_, animation, __) => const HomeScreen(),
-        transitionsBuilder: (_, animation, __, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 0.04),
-                end: Offset.zero,
-              ).animate(
-                CurvedAnimation(parent: animation, curve: Curves.easeOut),
-              ),
-              child: child,
-            ),
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 480),
-      ),
-    );
+      if (result != null) {
+        // Success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Signup Successful! Welcome to SafeHer.'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        // NOTE: Navigation to Home Screen is handled automatically by AuthWrapper in main.dart
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
-  void _onGoogleSignUp() {
-    // TODO: implement Google Sign-In
-    debugPrint('Google sign-up tapped');
+  Future<void> _onGoogleSignUp() async {
+    setState(() => _isLoading = true);
+    try {
+      final result = await FirebaseAuthService().signInWithGoogle();
+      
+      if (result == null) {
+        debugPrint('RegisterScreen: Google Sign-Up cancelled');
+        return;
+      }
+
+      debugPrint('RegisterScreen: Google Sign-Up success');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
 
@@ -632,8 +665,11 @@ class _RegisterScreenState extends State<RegisterScreen>
                 fontWeight: FontWeight.w600,
               ),
               recognizer: TapGestureRecognizer()
-                ..onTap = () =>
-                    Navigator.pushReplacementNamed(context, '/login'),
+                ..onTap = () {
+                  if (widget.onToggle != null) {
+                    widget.onToggle!();
+                  }
+                },
             ),
           ],
         ),

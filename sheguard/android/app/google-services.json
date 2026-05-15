@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "1086855213708",
+    "project_id": "safeher-95681",
+    "storage_bucket": "safeher-95681.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1086855213708:android:42f6f475ed995d0be2c1a9",
+        "android_client_info": {
+          "package_name": "com.example.sheguard"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1086855213708-rcmr17n28j0lj9srljp0rn7sat5diddc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.sheguard",
+            "certificate_hash": "d5bb65bc0822ab908e536a099b4d87a30920f335"
+          }
+        },
+        {
+          "client_id": "1086855213708-akihadr1rd5oa645n86fbsem7cum3kth.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB03FMOCuDabNUp58nw8YCY3F-VqHdBZPg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1086855213708-akihadr1rd5oa645n86fbsem7cum3kth.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1086855213708-8g2ihf3s3j0uc5k58douqgacelg1btlr.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.sheguard"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

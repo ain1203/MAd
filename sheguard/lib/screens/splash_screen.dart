@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../services/firebase_auth_service.dart';
+import 'home_screen.dart';
 
 /// SafeHer Splash Screen — StatefulWidget
 ///
@@ -28,8 +30,8 @@ class _SplashScreenState extends State<SplashScreen> {
     // ── NAVIGATION TIMER (3 Seconds) ─────────────────────────────────────────
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
-        // pushReplacementNamed prevents the user from going back to the splash
-        Navigator.pushReplacementNamed(context, '/login');
+        // Navigate to AuthWrapper which will decide between Home and Login
+        Navigator.pushReplacementNamed(context, '/auth-wrapper');
       }
     });
   }

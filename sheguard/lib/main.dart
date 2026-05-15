@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
+// Services
+import 'services/firebase_auth_service.dart';
+import 'services/user_session.dart';
+
+// Screens
 import 'screens/splash_screen.dart';
-import 'screens/login_screen.dart';
-import 'screens/register_screen.dart';
+import 'screens/auth_page.dart';
 import 'screens/home_screen.dart';
 import 'screens/safety_tips_screen.dart';
 import 'screens/fake_call_screen.dart';
@@ -13,17 +20,18 @@ import 'screens/alerts_history_screen.dart';
 import 'screens/chatbot_screen.dart';
 import 'screens/incoming_call_screen.dart';
 
-
-
 Future<void> main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
     
-    // Attempt to load background services safely
+    // Initialize Firebase
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    
+    // Background services
     await AndroidAlarmManager.initialize();
     
-
-
     await AwesomeNotifications().initialize(
       null,
       [
@@ -42,7 +50,6 @@ Future<void> main() async {
       debug: true,
     );
 
-    // Set up listeners
     AwesomeNotifications().setListeners(
       onActionReceivedMethod: NotificationController.onActionReceivedMethod,
       onNotificationCreatedMethod: NotificationController.onNotificationCreatedMethod,
@@ -54,61 +61,6 @@ Future<void> main() async {
   }
 
   runApp(const SafeHerApp());
-}
-
-class NotificationController {
-  /// Use this method to detect when a new notification or a schedule is created
-  @pragma("vm:entry-point")
-  static Future<void> onNotificationCreatedMethod(ReceivedNotification receivedNotification) async {
-    // Your code goes here
-  }
-
-  /// Use this method to detect every time that a new notification is displayed
-  @pragma("vm:entry-point")
-  static Future<void> onNotificationDisplayedMethod(ReceivedNotification receivedNotification) async {
-    if (receivedNotification.channelKey == 'fake_call_channel') {
-      final String callerName = receivedNotification.payload?['caller'] ?? 'Unknown';
-      
-      // Immediately show the full-screen UI when the notification is displayed
-      SafeHerApp.navigatorKey.currentState?.push(
-        MaterialPageRoute(
-          settings: const RouteSettings(name: '/incoming-call'),
-          builder: (_) => IncomingCallScreen(callerName: callerName),
-        ),
-      );
-    }
-  }
-
-  /// Use this method to detect if the user dismissed a notification
-  @pragma("vm:entry-point")
-  static Future<void> onDismissActionReceivedMethod(ReceivedAction receivedAction) async {
-    // Your code goes here
-  }
-
-  /// Use this method to detect when the user taps on a notification or action button
-  @pragma("vm:entry-point")
-  static Future<void> onActionReceivedMethod(ReceivedAction receivedAction) async {
-    if (receivedAction.channelKey == 'fake_call_channel') {
-      // If we're already on the IncomingCallScreen, don't push it again
-      bool isAlreadyOnCallScreen = false;
-      SafeHerApp.navigatorKey.currentState?.popUntil((route) {
-        if (route.settings.name == '/incoming-call') {
-          isAlreadyOnCallScreen = true;
-        }
-        return true; 
-      });
-
-      if (!isAlreadyOnCallScreen) {
-        final String callerName = receivedAction.payload?['caller'] ?? 'Unknown';
-        SafeHerApp.navigatorKey.currentState?.push(
-          MaterialPageRoute(
-            settings: const RouteSettings(name: '/incoming-call'),
-            builder: (_) => IncomingCallScreen(callerName: callerName),
-          ),
-        );
-      }
-    }
-  }
 }
 
 class SafeHerApp extends StatelessWidget {
@@ -123,54 +75,100 @@ class SafeHerApp extends StatelessWidget {
       title: 'SafeHer',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primaryColor: Colors.purple[700],
+        primaryColor: const Color(0xFF6A1B9A),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.purple,
-          primary: Colors.purple[700]!,
+          seedColor: const Color(0xFF6A1B9A),
+          primary: const Color(0xFF6A1B9A),
           secondary: const Color(0xFFF3E5F5),
         ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.purple[700],
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            elevation: 4,
-            shadowColor: Colors.purple.withOpacity(0.4),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: const Color(0xFFF5F5F5),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey[200]!, width: 1),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.purple[700]!, width: 1.5),
-          ),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        ),
+        useMaterial3: true,
       ),
       initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),
-        '/login': (context) => const LoginScreen(),
-        '/register': (context) => const RegisterScreen(),
+        '/auth-wrapper': (context) => const AuthWrapper(),
         '/home': (context) => const HomeScreen(),
         '/safety-tips': (context) => const SafetyTipsScreen(),
         '/circle': (context) => const CircleScreen(),
-        '/alerts-history': (context) => AlertsHistoryScreen(),
+        '/alerts-history': (context) => const AlertsHistoryScreen(),
         '/chatbot': (context) => const ChatbotScreen(),
         '/fake-call': (context) => const FakeCallScreen(),
       },
     );
+  }
+}
+
+/// ─── AUTH STATE LISTENER ───
+/// This widget automatically redirects users based on their Firebase login status.
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuthService().authStateChanges,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.active) {
+          final User? user = snapshot.data;
+          if (user == null) {
+            // Logged out -> Show AuthPage (Login/Signup toggle)
+            return const AuthPage();
+          } else {
+            // Logged in -> Initialize session and show Home
+            _initializeSession(user);
+            return const HomeScreen();
+          }
+        }
+        return const Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(color: Color(0xFF6A1B9A)),
+          ),
+        );
+      },
+    );
+  }
+
+  void _initializeSession(User user) {
+    UserSession.setFromEmail(user.email ?? 'user@example.com');
+    if (user.displayName != null && user.displayName!.isNotEmpty) {
+      UserSession.setFromFullName(user.displayName!);
+    }
+    if (user.photoURL != null) {
+      UserSession.setProfileImage(user.photoURL!);
+    }
+  }
+}
+
+class NotificationController {
+  @pragma("vm:entry-point")
+  static Future<void> onNotificationCreatedMethod(ReceivedNotification receivedNotification) async {}
+
+  @pragma("vm:entry-point")
+  static Future<void> onNotificationDisplayedMethod(ReceivedNotification receivedNotification) async {
+    if (receivedNotification.channelKey == 'fake_call_channel') {
+      final String callerName = receivedNotification.payload?['caller'] ?? 'Unknown';
+      SafeHerApp.navigatorKey.currentState?.push(
+        MaterialPageRoute(
+          settings: const RouteSettings(name: '/incoming-call'),
+          builder: (_) => IncomingCallScreen(callerName: callerName),
+        ),
+      );
+    }
+  }
+
+  @pragma("vm:entry-point")
+  static Future<void> onDismissActionReceivedMethod(ReceivedAction receivedAction) async {}
+
+  @pragma("vm:entry-point")
+  static Future<void> onActionReceivedMethod(ReceivedAction receivedAction) async {
+    if (receivedAction.channelKey == 'fake_call_channel') {
+      final String callerName = receivedAction.payload?['caller'] ?? 'Unknown';
+      SafeHerApp.navigatorKey.currentState?.push(
+        MaterialPageRoute(
+          settings: const RouteSettings(name: '/incoming-call'),
+          builder: (_) => IncomingCallScreen(callerName: callerName),
+        ),
+      );
+    }
   }
 }

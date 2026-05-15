@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/firebase_auth_service.dart';
+import '../services/user_session.dart';
 import 'home_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -6,7 +8,8 @@ import 'home_screen.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final VoidCallback? onToggle;
+  const LoginScreen({super.key, this.onToggle});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -70,13 +73,13 @@ class _LoginScreenState extends State<LoginScreen>
     if (_selectedTab == index) return;
     setState(() => _selectedTab = index);
 
-    // Navigate to Register when "Register" tab is tapped
-    if (index == 1) {
-      Navigator.pushReplacementNamed(context, '/register');
+    // If "Register" tab is tapped, use the toggle callback
+    if (index == 1 && widget.onToggle != null) {
+      widget.onToggle!();
     }
   }
 
-  /// Validates the form, shows a brief loading state, then pushes HomeScreen.
+  /// Validates the form, shows a brief loading state, then logs in with Firebase.
   Future<void> _handleLogin() async {
     // Dismiss keyboard
     FocusScope.of(context).unfocus();
@@ -85,60 +88,107 @@ class _LoginScreenState extends State<LoginScreen>
 
     setState(() => _isLoading = true);
 
-    // Simulate a short network / auth delay for UX polish
-    await Future.delayed(const Duration(milliseconds: 900));
-
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    // ── Navigate to HomeScreen, replacing the login route so the user
-    //    cannot press Back to return to the login page.
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (_, animation, __) => const HomeScreen(),
-        transitionsBuilder: (_, animation, __, child) {
-          // Smooth fade + upward slide transition into HomeScreen
-          return FadeTransition(
-            opacity: animation,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 0.04),
-                end: Offset.zero,
-              ).animate(
-                CurvedAnimation(parent: animation, curve: Curves.easeOut),
-              ),
-              child: child,
-            ),
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 480),
-      ),
-    );
+    try {
+      await FirebaseAuthService().loginWithEmail(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+      // NOTE: Success navigation is handled automatically by AuthWrapper in main.dart
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
-  void _handleForgotPassword() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Password reset coming soon!'),
-        backgroundColor: _primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+  Future<void> _handleForgotPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter your email first.'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    try {
+      setState(() => _isLoading = true);
+      await FirebaseAuthService().sendPasswordReset(email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Password reset link sent to $email'),
+          backgroundColor: _primary,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
-  void _handleSocialLogin(String provider) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$provider login coming soon!'),
-        backgroundColor: _primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+  Future<void> _handleSocialLogin(String provider) async {
+    if (provider == 'Google') {
+      setState(() => _isLoading = true);
+      try {
+        final result = await FirebaseAuthService().signInWithGoogle();
+        
+        // If result is null, user cancelled - just stop loading
+        if (result == null) {
+          debugPrint('LoginScreen: Google Sign-In cancelled');
+          return;
+        }
+
+        // Success is handled by AuthWrapper stream listener in main.dart
+        debugPrint('LoginScreen: Google Sign-In success');
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$provider login coming soon!'),
+          backgroundColor: _primary,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
+
 
   // ─────────────────────────────────────────────────────────────────────────
   //  BUILD

@@ -13,7 +13,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   final List<Map<String, String>> _messages = [
     {
       'sender': 'bot',
-      'text': 'Hello! 👋 I\'m SheGuard AI. I\'m here to provide safety tips and guidance. How can I help you today?'
+      'text': 'Hello! 👋 I\'m SafeHer AI. I\'m here to provide safety tips and guidance. How can I help you today?'
     }
   ];
   
@@ -83,7 +83,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('SheGuard AI', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('Safeher AI', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             Text('Safety Assistant', style: TextStyle(fontSize: 12, color: Colors.white70)),
           ],
         ),

@@ -3,15 +3,15 @@ import 'package:flutter/foundation.dart';
 
 class GeminiService {
   // ─── CONFIGURATION ───
-  // Replace this with your actual Gemini API Key from Google AI Studio
+  // Ensure your API Key is kept secure and active
   static const String _apiKey = 'AIzaSyBE3pIDuAJaF7WjcxcPtvjQBODXpEn54u8'; 
   
-  // Model name (gemini-1.5-flash is recommended for speed and cost)
-  static const String _modelName = 'gemini-1.5-flash';
+  // Clean model identifier matching active free-tier routing parameters
+  static const String _modelName = 'gemini-3-flash';
 
-  // System Prompt for Women's Safety Assistant
+  // System Prompt for Women's Safety Assistant (SheGuard AI)
   static const String _systemPrompt = '''
-You are "SheGuard AI", a dedicated safety assistant for women. 
+You are "SafeHer AI", a dedicated safety assistant for women. 
 Your goal is to provide practical, immediate, and compassionate safety advice.
 Guidelines:
 1. Keep responses short, direct, and actionable.
@@ -30,20 +30,23 @@ Guidelines:
 
   void _initializeModel() {
     try {
-      debugPrint('🤖 Gemini: Initializing model...');
+      debugPrint('🤖 Gemini: Initializing model: $_modelName...');
+      
+      // Removed the manual 'models/' string appendment to prevent route duplication errors 
+      // on sandbox platforms and explicit proxy wrappers.
       _model = GenerativeModel(
-        model: 'models/$_modelName', // Added models/ prefix for better compatibility
+        model: _modelName, 
         apiKey: _apiKey,
         systemInstruction: Content.system(_systemPrompt),
         safetySettings: [
-          // Adjusting safety settings because a safety app needs to talk about "dangerous" topics
+          // Keeping restrictions relaxed so a safety app can process sensitive or toxic terms safely
           SafetySetting(HarmCategory.harassment, HarmBlockThreshold.none),
           SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.none),
           SafetySetting(HarmCategory.sexuallyExplicit, HarmBlockThreshold.none),
           SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.none),
         ],
         generationConfig: GenerationConfig(
-          temperature: 0.7,
+          temperature: 0.5, // Lowered slightly to ensure more deterministic, high-grounded safety tips
           topK: 40,
           topP: 0.95,
           maxOutputTokens: 250,
@@ -61,8 +64,8 @@ Guidelines:
   /// Handles all common API and network errors gracefully.
   Future<String> sendMessage(String message) async {
     // Basic validation
-    if (_apiKey == 'YOUR_API_KEY_HERE' || _apiKey.isEmpty) {
-      return 'API Key not configured. Please add your Gemini API key in gemini_service.dart.';
+    if (_apiKey.isEmpty || _apiKey.startsWith('YOUR_')) {
+      return 'API Key not configured. Please add a valid Gemini API key in gemini_service.dart.';
     }
 
     if (message.trim().isEmpty) {
@@ -77,8 +80,8 @@ Guidelines:
       final text = response.text;
       
       if (text == null || text.isEmpty) {
-        debugPrint('⚠️ Gemini: Received null/empty response. This usually means the safety filter blocked it.');
-        return 'I\'m sorry, I cannot respond to that. Please try asking in a different way or use the SOS button if you are in danger.';
+        debugPrint('⚠️ Gemini: Received null/empty response. Safety filters triggered.');
+        return 'I\'m sorry, I cannot respond to that safely. Please try rephrasing your concern, or tap the SOS button if you are in immediate danger.';
       }
 
       debugPrint('✅ Gemini: Received response');
@@ -88,16 +91,15 @@ Guidelines:
       
       final errorString = e.toString().toLowerCase();
       
+      // Fine-tuned error handlers matching public platform messages
       if (errorString.contains('quota') || errorString.contains('429')) {
-        return 'I\'ve reached my limit for now. Please try again in a few minutes.';
+        return 'System limits reached. Please wait a moment or utilize standard emergency tools.';
       } else if (errorString.contains('network') || errorString.contains('connection')) {
-        return 'Connection error. Please check your internet and try again.';
+        return 'Connection error. Please check your internet connectivity and try again.';
       } else if (errorString.contains('location') || errorString.contains('unsupported')) {
-        return 'Gemini is not yet available in your region.';
-      } else if (errorString.contains('argument') || errorString.contains('invalid')) {
-        return 'There was an issue with the request. Please try a different question.';
+        return 'Gemini access constraints hit. Please fallback to direct local features.';
       } else {
-        return 'The AI service is temporarily unavailable. If you are in danger, please use the SOS button immediately.';
+        return 'The assistant service is experiencing routing adjustments. If you are in critical danger, use the SOS alerts immediately.';
       }
     }
   }
