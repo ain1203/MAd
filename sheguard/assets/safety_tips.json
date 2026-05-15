@@ -17,6 +17,7 @@
   { "title": "Plan Route", "description": "Know your route before leaving.", "icon": "location" },
   { "title": "Keep SOS Ready", "description": "Always have emergency SOS app ready.", "icon": "phone" },
 
+
   { "title": "No Oversharing", "description": "Avoid posting live location on social media.", "icon": "security" },
   { "title": "Avoid Alcohol Alone", "description": "Do not consume alcohol alone in unknown places.", "icon": "security" },
   { "title": "Be Visible", "description": "Wear bright clothes at night.", "icon": "night" },
@@ -51,5 +52,25 @@
   { "title": "Know Police Station", "description": "Be aware of nearby police stations.", "icon": "location" },
   { "title": "Lock Devices", "description": "Keep phone and apps secured.", "icon": "security" },
   { "title": "Safe Messaging", "description": "Share quick check-in messages.", "icon": "phone" },
-  { "title": "Stay Observant", "description": "Notice people around you.", "icon": "security" }
+  { "title": "Stay Observant", "description": "Notice people around you.", "icon": "security" },
+
+  
+  { "title": "Mirror Check", "description": "Use shop windows or parked car mirrors to see behind you.", "icon": "visibility" },
+  { "title": "Digital Footprint", "description": "Blur your home address on public map photos.", "icon": "security" },
+  { "title": "Pepper Spray Ready", "description": "Keep safety tools in your hand, not buried in your bag.", "icon": "security" },
+  { "title": "Dynamic Pacing", "description": "Change your walking speed if you feel someone is following.", "icon": "walk" },
+  { "title": "Elevator Protocol", "description": "Stand near the control panel to reach the alarm easily.", "icon": "security" },
+
+  { "title": "Vehicle Perimeter", "description": "Check the back seat before entering your car.", "icon": "car" },
+  { "title": "Wi-Fi Caution", "description": "Avoid using public Wi-Fi for sensitive bank apps.", "icon": "security" },
+  { "title": "Smart Lock Logic", "description": "Lock your car doors immediately after getting inside.", "icon": "car" },
+  { "title": "Key Readiness", "description": "Have your house keys in hand before reaching the door.", "icon": "home" },
+  { "title": "Noise Maker", "description": "Carry a high-decibel personal alarm for instant attention.", "icon": "notifications" },
+
+  { "title": "Privacy Screen", "description": "Use a screen protector to hide messages in public.", "icon": "security" },
+  { "title": "Alternative Commute", "description": "Vary your daily route to remain unpredictable.", "icon": "location" },
+  { "title": "Check-in Timer", "description": "Set a 'Safety Timer' that alerts friends if not deactivated.", "icon": "timer" },
+  { "title": "ATM Awareness", "description": "Cover the keypad and scan for skimmers before use.", "icon": "payments" },
+  { "title": "Shadow Tracking", "description": "Watch your shadow to detect movement behind you at night.", "icon": "night" }
+
 ]
