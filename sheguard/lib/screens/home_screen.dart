@@ -605,9 +605,9 @@ class _HomeTabContentState extends State<HomeTabContent>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Welcome back,',
-                    style: TextStyle(fontSize: 13, color: SafeHerColors.textMuted)),
-                Text('Hello, ${UserSession.displayName}',
+                const Text('SafeHer',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: SafeHerColors.primary)),
+                Text('Welcome, ${UserSession.displayName}',
                     style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: SafeHerColors.textDark)),
               ],
             ),
