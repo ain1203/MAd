@@ -11,7 +11,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 
 // Import all screens
-import 'chatbot_screen.dart';
 import 'circle_screen.dart';
 import 'alerts_history_screen.dart';
 import 'safety_tips_screen.dart';
@@ -50,7 +49,6 @@ class _HomeScreenState extends State<HomeScreen> {
   // List of tabs
   final List<Widget> _tabs = [
     const HomeTabContent(),
-    const ChatbotScreen(),
     const CircleScreen(),
     const AlertsHistoryScreen(),
   ];
@@ -97,8 +95,6 @@ class _HomeScreenState extends State<HomeScreen> {
         items: const [
           BottomNavigationBarItem(
               icon: Icon(Icons.home_rounded), label: 'Home'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_rounded), label: 'Chatbot'),
           BottomNavigationBarItem(
               icon: Icon(Icons.group_rounded), label: 'Circle'),
           BottomNavigationBarItem(

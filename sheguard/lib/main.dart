@@ -22,7 +22,6 @@ import 'screens/safety_tips_screen.dart';
 import 'screens/fake_call_screen.dart';
 import 'screens/circle_screen.dart';
 import 'screens/alerts_history_screen.dart';
-import 'screens/chatbot_screen.dart';
 import 'screens/incoming_call_screen.dart';
 
 Future<void> main() async {
@@ -97,7 +96,6 @@ class SafeHerApp extends StatelessWidget {
             '/safety-tips': (context) => const SafetyTipsScreen(),
             '/circle': (context) => const CircleScreen(),
             '/alerts-history': (context) => const AlertsHistoryScreen(),
-            '/chatbot': (context) => const ChatbotScreen(),
             '/fake-call': (context) => const FakeCallScreen(),
           },
         );
