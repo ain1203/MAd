@@ -269,7 +269,7 @@ class _CircleScreenState extends State<CircleScreen> {
     return StreamBuilder<QuerySnapshot>(
       stream: ContactService.getCircleStream(),
       builder: (context, contactSnapshot) {
-        if (contactSnapshot.hasError) return Center(child: Text("Error: ${contactSnapshot.error}"));
+        if (contactSnapshot.hasError) return _buildErrorState(contactSnapshot.error!);
         if (contactSnapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -296,7 +296,7 @@ class _CircleScreenState extends State<CircleScreen> {
           builder: (context, alertSnapshot) {
             if (alertSnapshot.hasError) {
               debugPrint("❌ Alert Stream Error: ${alertSnapshot.error}");
-              return Center(child: Text("Error: ${alertSnapshot.error}"));
+              return _buildErrorState(alertSnapshot.error!);
             }
             if (alertSnapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -391,6 +391,24 @@ class _CircleScreenState extends State<CircleScreen> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildErrorState(Object error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 48),
+            const SizedBox(height: 16),
+            const Text("Stream Error", style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(error.toString(), textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+          ],
+        ),
+      ),
     );
   }
 

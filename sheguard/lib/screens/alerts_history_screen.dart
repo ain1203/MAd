@@ -44,7 +44,7 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return _buildErrorState();
+            return _buildErrorState(snapshot.error!);
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor));
@@ -292,8 +292,22 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
     );
   }
 
-  Widget _buildErrorState() {
-    return const Center(child: Text("Error loading alerts. Check permissions."));
+  Widget _buildErrorState(Object error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 48),
+            const SizedBox(height: 16),
+            const Text("Error loading alerts", style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(error.toString(), textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          ],
+        ),
+      ),
+    );
   }
 }
 
