@@ -72,7 +72,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
   bool _isLoading = false;
 
   // TODO: Apni OpenRouter ki API Key yahan dalein (sk-or-v1-...)
-  final String _openRouterKey = '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';
+  final String _openRouterKey = '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';
 
   Future<void> _sendMessage() async {
     final text = _controller.text.trim();

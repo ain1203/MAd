@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
@@ -36,31 +35,6 @@ Future<void> main() async {
     
     // Background services
     await AndroidAlarmManager.initialize();
-    
-    await AwesomeNotifications().initialize(
-      null,
-      [
-        NotificationChannel(
-          channelKey: 'fake_call_channel',
-          channelName: 'Fake Call Notifications',
-          channelDescription: 'Notification channel for fake calls',
-          defaultColor: SafeHerColors.primary,
-          ledColor: Colors.white,
-          importance: NotificationImportance.Max,
-          channelShowBadge: true,
-          locked: true,
-          defaultRingtoneType: DefaultRingtoneType.Ringtone,
-        )
-      ],
-      debug: true,
-    );
-
-    AwesomeNotifications().setListeners(
-      onActionReceivedMethod: NotificationController.onActionReceivedMethod,
-      onNotificationCreatedMethod: NotificationController.onNotificationCreatedMethod,
-      onNotificationDisplayedMethod: NotificationController.onNotificationDisplayedMethod,
-      onDismissActionReceivedMethod: NotificationController.onDismissActionReceivedMethod,
-    );
   } catch (e) {
     debugPrint("🚨 Initialization error: $e");
   }
@@ -139,40 +113,6 @@ class AuthWrapper extends StatelessWidget {
     }
     if (user.photoURL != null) {
       UserSession.setProfileImage(user.photoURL!);
-    }
-  }
-}
-
-class NotificationController {
-  @pragma("vm:entry-point")
-  static Future<void> onNotificationCreatedMethod(ReceivedNotification receivedNotification) async {}
-
-  @pragma("vm:entry-point")
-  static Future<void> onNotificationDisplayedMethod(ReceivedNotification receivedNotification) async {
-    if (receivedNotification.channelKey == 'fake_call_channel') {
-      final String callerName = receivedNotification.payload?['caller'] ?? 'Unknown';
-      SafeHerApp.navigatorKey.currentState?.push(
-        MaterialPageRoute(
-          settings: const RouteSettings(name: '/incoming-call'),
-          builder: (_) => IncomingCallScreen(callerName: callerName),
-        ),
-      );
-    }
-  }
-
-  @pragma("vm:entry-point")
-  static Future<void> onDismissActionReceivedMethod(ReceivedAction receivedAction) async {}
-
-  @pragma("vm:entry-point")
-  static Future<void> onActionReceivedMethod(ReceivedAction receivedAction) async {
-    if (receivedAction.channelKey == 'fake_call_channel') {
-      final String callerName = receivedAction.payload?['caller'] ?? 'Unknown';
-      SafeHerApp.navigatorKey.currentState?.push(
-        MaterialPageRoute(
-          settings: const RouteSettings(name: '/incoming-call'),
-          builder: (_) => IncomingCallScreen(callerName: callerName),
-        ),
-      );
     }
   }
 }
