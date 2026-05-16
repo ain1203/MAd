@@ -18,11 +18,12 @@ import 'safety_tips_screen.dart';
 import 'fake_call_screen.dart';
 import 'profile_screen.dart';
 
+import '../services/panic_shake_service.dart';
+import 'incoming_call_screen.dart';
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  SafeHer – Brand tokens
 // ─────────────────────────────────────────────────────────────────────────────
-
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Emergency Contact model
@@ -46,6 +47,72 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedNavIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize Panic Shake Detection
+    PanicShakeService().startListening(
+      onShake: _handleShakeTrigger,
+    );
+  }
+
+  @override
+  void dispose() {
+    PanicShakeService().stopListening();
+    super.dispose();
+  }
+
+  void _handleShakeTrigger() async {
+    if (!mounted) return;
+
+    // 1. Immediately trigger Fake Call as a distraction
+    await _triggerFakeCallDistraction();
+
+    // 2. Show the SOS triggered message AFTER the call screen is closed
+    // Small delay ensures the pop transition is complete and HomeScreen is visible
+    await Future.delayed(const Duration(milliseconds: 600));
+
+    // Only if the user is currently on the Home tab
+    if (mounted && _selectedNavIndex == 0) {
+      _showShakeSosDialog();
+    }
+  }
+
+  void _showShakeSosDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true, // Allow tapping outside to dismiss since it's just info now
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('🚨 SOS Triggered',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+        content: const Text(
+            'We have sent your location to your contacts.'),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: SafeHerColors.primary),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _triggerFakeCallDistraction() async {
+    // Navigate to Incoming Call Screen with a default "Mom" caller
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const IncomingCallScreen(
+          callerName: "Mom",
+          callerNumber: "+92 300 1234567",
+          callerAudio: "assets/audio/mom_voice.mp3",
+        ),
+      ),
+    );
+  }
 
   // List of tabs
   final List<Widget> _tabs = [
@@ -186,26 +253,21 @@ class _HomeTabContentState extends State<HomeTabContent>
   void _showSosDialog() {
     showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: true,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('🚨 SOS Activated',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('🚨 SOS Triggered',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
         content: const Text(
-            'Your location and status have been shared with your emergency contacts.'),
+            'We have sent your location to your contacts.'),
         actions: [
-          TextButton(
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: SafeHerColors.primary),
             onPressed: () {
               Navigator.pop(context);
               setState(() { _sosActivated = false; _sosProgress = 0.0; });
             },
-            child: const Text('Cancel Alert',
-                style: TextStyle(color: SafeHerColors.emergencyRed)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: SafeHerColors.primary),
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK', style: TextStyle(color: Colors.white)),
+            child: const Text('Close', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

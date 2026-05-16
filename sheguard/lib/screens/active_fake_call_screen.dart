@@ -186,8 +186,7 @@ class _ActiveFakeCallScreenState extends State<ActiveFakeCallScreen> {
                           children: [
                             GestureDetector(
                               onTap: () {
-                                _audioPlayer.stop();
-                                Navigator.of(context).popUntil((route) => route.isFirst);
+                                Navigator.of(context).pop();
                               },
                               child: Container(
                                 width: 75,

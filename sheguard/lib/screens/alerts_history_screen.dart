@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import '../services/user_session.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  AlertsHistoryScreen (Firebase Management Dashboard)
@@ -39,7 +40,7 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('alerts')
-            .orderBy('timestamp', descending: true)
+            .where('userId', isEqualTo: UserSession.uid) // Filter by current user
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -54,7 +55,17 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
             return _buildEmptyState();
           }
 
-          return _buildDashboard(docs);
+          // Sort client-side to avoid index requirement
+          final sortedDocs = List<QueryDocumentSnapshot>.from(docs);
+          sortedDocs.sort((a, b) {
+            final aTs = (a.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
+            final bTs = (b.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
+            if (aTs == null) return 1;
+            if (bTs == null) return -1;
+            return bTs.compareTo(aTs);
+          });
+
+          return _buildDashboard(sortedDocs);
         },
       ),
     );

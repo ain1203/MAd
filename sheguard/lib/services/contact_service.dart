@@ -75,52 +75,64 @@ class ContactService {
     }
   }
 
-  /// ─── CIRCLE CONTACTS (Legacy Support) ───
+  /// ─── CIRCLE MEMBERS (New 2-Tab System) ───
+  /// Path: circles/{uid}/contacts
   static CollectionReference get _circleRef =>
-      _db.collection('users').doc(_uid).collection('circle_contacts');
+      _db.collection('circles').doc(_uid).collection('contacts');
+
+  /// Searches for a registered user by email
+  static Future<Map<String, dynamic>?> searchUserByEmail(String email) async {
+    try {
+      final snapshot = await _db
+          .collection('users')
+          .where('email', isEqualTo: email.trim().toLowerCase())
+          .get();
+      
+      if (snapshot.docs.isNotEmpty) {
+        return snapshot.docs.first.data();
+      }
+      return null;
+    } catch (e) {
+      debugPrint("❌ Search Error: $e");
+      return null;
+    }
+  }
+
+  /// Adds a registered user to the safety circle
+  static Future<void> addCircleMember(Map<String, dynamic> userData) async {
+    try {
+      await _circleRef.doc(userData['uid']).set({
+        'uid': userData['uid'],
+        'name': userData['fullName'],
+        'email': userData['email'],
+        'phone': userData['phone'],
+        'photoURL': userData['photoURL'],
+        'addedAt': FieldValue.serverTimestamp(),
+      });
+      debugPrint("✅ Circle member added: ${userData['fullName']}");
+    } catch (e) {
+      debugPrint("❌ Add Circle Member Error: $e");
+      rethrow;
+    }
+  }
 
   static Stream<QuerySnapshot> getCircleStream() {
-    return _circleRef.orderBy('createdAt', descending: true).snapshots();
+    return _circleRef.orderBy('addedAt', descending: true).snapshots();
   }
 
-  static Future<void> addCircleContact(String name, String phone) async {
-    try {
-      final uid = _uid;
-      final docRef = await _circleRef.add({
-        'name': name,
-        'phone': phone,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-      debugPrint("✅ SUCCESS: CIRCLE CONTACT WRITTEN TO BACKEND");
-      debugPrint("📍 Project: safeher-95681");
-      debugPrint("📍 Firestore Path: users/$uid/circle_contacts/${docRef.id}");
-    } catch (e) {
-      debugPrint("❌ FIREBASE CIRCLE WRITE ERROR: $e");
-      rethrow;
-    }
-  }
-  
-  static Future<void> deleteCircleContact(String docId) async {
+  static Future<void> deleteCircleMember(String docId) async {
     try {
       await _circleRef.doc(docId).delete();
-      debugPrint("🗑️ Circle contact deleted from Backend: $docId");
     } catch (e) {
-      debugPrint("❌ FIREBASE DELETE ERROR: $e");
+      debugPrint("❌ Delete Circle Member Error: $e");
       rethrow;
     }
   }
 
-  /// ─── UPDATE CIRCLE ───
-  static Future<void> updateCircleContact(String docId, String name, String phone) async {
-    try {
-      await _circleRef.doc(docId).update({
-        'name': name,
-        'phone': phone,
-      });
-      debugPrint("📝 Circle contact updated in Backend: $docId");
-    } catch (e) {
-      debugPrint("❌ FIREBASE UPDATE ERROR: $e");
-      rethrow;
-    }
+  /// ─── SOS ALERTS STREAM (For the SOS Alerts Tab) ───
+  static Stream<QuerySnapshot> getAllAlertsStream() {
+    return _db.collection('alerts')
+        .orderBy('timestamp', descending: true)
+        .snapshots();
   }
 }

@@ -48,6 +48,8 @@ dependencies:
   vibration: ^3.1.8
   audioplayers: 5.2.1
   flutter_ringtone_player: ^4.0.0+4
+  sensors_plus: ^7.0.0
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

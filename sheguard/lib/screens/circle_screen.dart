@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/contact_service.dart';
+import '../theme/app_theme.dart';
 
 class CircleScreen extends StatefulWidget {
   const CircleScreen({super.key});
@@ -10,305 +13,400 @@ class CircleScreen extends StatefulWidget {
 }
 
 class _CircleScreenState extends State<CircleScreen> {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _relationController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false;
+  Map<String, dynamic>? _foundUser;
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _phoneController.dispose();
-    _relationController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _addContact() async {
-    if (_nameController.text.isNotEmpty && _phoneController.text.isNotEmpty) {
-      final name = _nameController.text.trim();
-      final phone = _phoneController.text.trim();
-      final relation = _relationController.text.trim();
-      
-      final fullName = relation.isNotEmpty ? "$name ($relation)" : name;
+  // ── Tab 1 Logic ────────────────────────────────────────────────────────────
 
-      await ContactService.addCircleContact(fullName, phone);
-      
-      _nameController.clear();
-      _phoneController.clear();
-      _relationController.clear();
-      if (mounted) Navigator.pop(context);
+  Future<void> _handleSearch() async {
+    final email = _searchController.text.trim();
+    if (email.isEmpty) return;
+
+    setState(() {
+      _isSearching = true;
+      _foundUser = null;
+    });
+
+    final user = await ContactService.searchUserByEmail(email);
+
+    setState(() {
+      _isSearching = false;
+      _foundUser = user;
+    });
+
+    if (user == null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("User not found or not registered")),
+      );
     }
   }
 
-  void _showEditContactSheet(String docId, String initialName, String initialPhone) {
-    final nameCtrl = TextEditingController(text: initialName);
-    final phoneCtrl = TextEditingController(text: initialPhone);
-    final formKey = GlobalKey<FormState>();
+  Future<void> _addMember() async {
+    if (_foundUser == null) return;
+    try {
+      await ContactService.addCircleMember(_foundUser!);
+      setState(() {
+        _foundUser = null;
+        _searchController.clear();
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Member added to your circle!")),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $e")),
+        );
+      }
+    }
+  }
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
-        ),
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-          top: 24, left: 24, right: 24,
-        ),
-        child: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Edit Circle Member', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: nameCtrl,
-                decoration: InputDecoration(labelText: 'Name', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
-                validator: (v) => v!.isEmpty ? 'Enter name' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: phoneCtrl,
-                keyboardType: TextInputType.phone,
-                decoration: InputDecoration(labelText: 'Phone', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
-                validator: (v) => v!.isEmpty ? 'Enter phone' : null,
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6A1B9A),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  onPressed: () {
-                    if (formKey.currentState?.validate() ?? false) {
-                      ContactService.updateCircleContact(docId, nameCtrl.text.trim(), phoneCtrl.text.trim());
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: const Text('Update Member', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ),
+  // ── Tab 2 Logic ────────────────────────────────────────────────────────────
+
+  Future<void> _openMap(double lat, double lng) async {
+    final url = Uri.parse("https://www.google.com/maps/search/?api=1&query=$lat,$lng");
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Could not open Google Maps")),
+        );
+      }
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  BUILD
+  // ══════════════════════════════════════════════════════════════════════════
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: Theme.of(context).primaryColor,
+          elevation: 0,
+          title: const Text(
+            "Safety Circle",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          bottom: const TabBar(
+            indicatorColor: Colors.white,
+            indicatorWeight: 3,
+            labelStyle: TextStyle(fontWeight: FontWeight.bold),
+            unselectedLabelStyle: TextStyle(fontWeight: FontWeight.normal),
+            tabs: [
+              Tab(text: "My Contacts", icon: Icon(Icons.people_alt_rounded)),
+              Tab(text: "SOS Alerts", icon: Icon(Icons.warning_amber_rounded)),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  void _showAddContactSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-        ),
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-          top: 20,
-          left: 20,
-          right: 20,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        body: TabBarView(
           children: [
-            const Text(
-              "Add Emergency Contact",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF6A1B9A),
-              ),
-            ),
-            const SizedBox(height: 20),
-            _buildTextField(_nameController, "Full Name", Icons.person),
-            const SizedBox(height: 12),
-            _buildTextField(
-              _phoneController,
-              "Phone Number",
-              Icons.phone,
-              inputType: TextInputType.phone,
-            ),
-            const SizedBox(height: 12),
-            _buildTextField(
-              _relationController,
-              "Relation (e.g. Mom, Friend)",
-              Icons.family_restroom,
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: _addContact,
-                child: const Text("Save to Circle",
-                    style: TextStyle(color: Colors.white, fontSize: 16)),
-              ),
-            ),
+            _buildContactsTab(),
+            _buildAlertsTab(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTextField(
-    TextEditingController controller,
-    String label,
-    IconData icon, {
-    TextInputType inputType = TextInputType.text,
-  }) {
-    return TextField(
-      controller: controller,
-      keyboardType: inputType,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: Theme.of(context).primaryColor),
-        filled: true,
-        fillColor: Theme.of(context).primaryColor.withOpacity(0.05),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+  // ── Tab 1: My Contacts ─────────────────────────────────────────────────────
+  Widget _buildContactsTab() {
+    return Column(
+      children: [
+        _buildSearchSection(),
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: ContactService.getCircleStream(),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) return Center(child: Text("Error: ${snapshot.error}"));
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final docs = snapshot.data?.docs ?? [];
+              if (docs.isEmpty) {
+                return _buildEmptyState(
+                  Icons.person_add_disabled_rounded,
+                  "No contacts added.\nSearch above to add registered users.",
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: docs.length,
+                itemBuilder: (context, index) {
+                  final data = docs[index].data() as Map<String, dynamic>;
+                  return _buildContactCard(data, docs[index].id);
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).primaryColor.withOpacity(0.05),
+        border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2))),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: "Enter user email...",
+                    prefixIcon: const Icon(Icons.email_outlined),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+                ),
+                onPressed: _isSearching ? null : _handleSearch,
+                child: _isSearching
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text("Search", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          if (_foundUser != null) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green.withOpacity(0.5)),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                    child: Text(_foundUser!['fullName'][0].toUpperCase()),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_foundUser!['fullName'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(_foundUser!['email'], style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      ],
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: _addMember,
+                    icon: const Icon(Icons.add_circle_outline),
+                    label: const Text("Add"),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContactCard(Map<String, dynamic> data, String docId) {
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(12),
+        leading: CircleAvatar(
+          radius: 24,
+          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+          backgroundImage: data['photoURL'] != null ? NetworkImage(data['photoURL']) : null,
+          child: data['photoURL'] == null ? Text(data['name'][0].toUpperCase()) : null,
+        ),
+        title: Text(data['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(data['email'] ?? data['phone'] ?? ""),
+        trailing: IconButton(
+          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+          onPressed: () => ContactService.deleteCircleMember(docId),
         ),
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).primaryColor,
-        elevation: 0,
-        leading: Navigator.canPop(context)
-          ? IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
-            )
-          : null,
-        title: const Text(
-          "My Circle",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-        ),
-        centerTitle: true,
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: ContactService.getCircleStream(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-             debugPrint("❌ Circle Stream Error: ${snapshot.error}");
-             return Center(child: Text("Error: ${snapshot.error}"));
-          }
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+  // ── Tab 2: SOS Alerts (Filtered by Circle) ────────────────────────────────
+  Widget _buildAlertsTab() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: ContactService.getCircleStream(),
+      builder: (context, contactSnapshot) {
+        if (contactSnapshot.hasError) return Center(child: Text("Error: ${contactSnapshot.error}"));
+        if (contactSnapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-          final docs = snapshot.data?.docs ?? [];
+        final contactDocs = contactSnapshot.data?.docs ?? [];
+        if (contactDocs.isEmpty) {
+          return _buildEmptyState(
+            Icons.people_outline,
+            "Your circle is empty.\nAdd contacts to see their alerts.",
+          );
+        }
 
-          if (docs.isEmpty) {
-            return const Center(
-              child: Text(
-                "No contacts added yet",
-                style: TextStyle(color: Colors.black54, fontSize: 15),
-              ),
-            );
-          }
+        // Extract UIDs of circle members (Firestore whereIn limited to 10)
+        final List<String> contactUids = contactDocs
+            .map((doc) => (doc.data() as Map<String, dynamic>)['uid'] as String)
+            .take(10)
+            .toList();
 
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-              final doc = docs[index];
-              final data = doc.data() as Map<String, dynamic>;
-              final String name = data['name'] ?? 'No Name';
-              final String phone = data['phone'] ?? 'No Phone';
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('alerts')
+              .where('userId', whereIn: contactUids)
+              .snapshots(),
+          builder: (context, alertSnapshot) {
+            if (alertSnapshot.hasError) {
+              debugPrint("❌ Alert Stream Error: ${alertSnapshot.error}");
+              return Center(child: Text("Error: ${alertSnapshot.error}"));
+            }
+            if (alertSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-              return Center(
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 14),
-                    constraints: const BoxConstraints(maxWidth: 500),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).cardColor,
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.08),
-                          blurRadius: 12,
-                          offset: const Offset(0, 5),
+            final docs = alertSnapshot.data?.docs ?? [];
+            if (docs.isEmpty) {
+              return _buildEmptyState(
+                Icons.notifications_off_rounded,
+                "No emergency alerts from your circle.",
+              );
+            }
+
+            // Sort client-side to avoid index requirement
+            final sortedDocs = List<QueryDocumentSnapshot>.from(docs);
+            sortedDocs.sort((a, b) {
+              final aTs = (a.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
+              final bTs = (b.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
+              if (aTs == null) return 1;
+              if (bTs == null) return -1;
+              return bTs.compareTo(aTs);
+            });
+
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: sortedDocs.length,
+              itemBuilder: (context, index) {
+                final data = sortedDocs[index].data() as Map<String, dynamic>;
+                final timestamp = data['timestamp'] as Timestamp?;
+                final dateStr = timestamp != null
+                    ? DateFormat('hh:mm a, dd MMM').format(timestamp.toDate())
+                    : 'Now';
+
+                return Card(
+                  elevation: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: const BorderSide(color: Colors.redAccent, width: 1),
+                  ),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        contentPadding: const EdgeInsets.all(16),
+                        leading: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), shape: BoxShape.circle),
+                          child: const Icon(Icons.warning_rounded, color: Colors.red),
                         ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                          child: Icon(Icons.person,
-                              color: Theme.of(context).primaryColor),
+                        title: Text(
+                          data['userName'] ?? "Unknown User",
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                         ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: Column(
+                        subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              name,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                            Text(
-                              phone,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                              ),
+                            Text("Alert Type: ${data['type'] ?? 'SOS'}"),
+                            Text("Time: $dateStr", style: const TextStyle(fontSize: 12)),
+                          ],
+                        ),
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            "ACTIVE",
+                            style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            TextButton.icon(
+                              onPressed: () => _openMap(data['lat'], data['lng']),
+                              icon: const Icon(Icons.location_on, color: Colors.blue),
+                              label: const Text("View Location", style: TextStyle(color: Colors.blue)),
                             ),
                           ],
                         ),
                       ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined, color: Colors.blue),
-                            onPressed: () => _showEditContactSheet(doc.id, name, phone),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                            onPressed: () => ContactService.deleteCircleContact(doc.id),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
-                ),
-              );
-            },
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFF6A1B9A),
-        onPressed: _showAddContactSheet,
-        label: const Text("Add Contact", style: TextStyle(color: Colors.white)),
-        icon: const Icon(Icons.add, color: Colors.white),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyState(IconData icon, String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 64, color: Colors.grey[300]),
+          const SizedBox(height: 16),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey[500], fontSize: 14),
+          ),
+        ],
       ),
     );
   }

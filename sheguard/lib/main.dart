@@ -107,6 +107,7 @@ class AuthWrapper extends StatelessWidget {
   }
 
   void _initializeSession(User user) {
+    UserSession.setUid(user.uid);
     UserSession.setFromEmail(user.email ?? 'user@example.com');
     if (user.displayName != null && user.displayName!.isNotEmpty) {
       UserSession.setFromFullName(user.displayName!);

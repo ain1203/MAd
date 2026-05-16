@@ -18,6 +18,7 @@ class AlertService {
       // 2. Prepare Data
       final alertData = {
         'type': type,
+        'userId': UserSession.uid,
         'userName': UserSession.displayName,
         'email': UserSession.email,
         'lat': position?.latitude ?? 0.0,

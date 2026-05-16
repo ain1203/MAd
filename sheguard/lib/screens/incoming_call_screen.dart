@@ -155,9 +155,10 @@ class _IncomingCallScreenState extends State<IncomingCallScreen> with TickerProv
                           icon: Icons.call,
                           label: "Accept",
                           color: Colors.greenAccent.shade700,
-                          onTap: () {
+                          onTap: () async {
                             _stopEffects();
-                            Navigator.pushReplacement(
+                            // Push Active screen and wait for it to finish
+                            await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => ActiveFakeCallScreen(
@@ -167,6 +168,10 @@ class _IncomingCallScreenState extends State<IncomingCallScreen> with TickerProv
                                 ),
                               ),
                             );
+                            // After Active screen is popped, pop the Incoming screen as well
+                            if (mounted) {
+                              Navigator.pop(context);
+                            }
                           },
                         ),
                       ),

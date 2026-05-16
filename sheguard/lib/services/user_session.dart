@@ -1,6 +1,7 @@
 class UserSession {
   static String displayName = 'User';
   static String email = 'user@example.com';
+  static String uid = '';
   static String? fullName;
   static String? profileImageUrl;
 
@@ -22,9 +23,14 @@ class UserSession {
     profileImageUrl = url;
   }
 
+  static void setUid(String id) {
+    uid = id;
+  }
+
   static void clearSession() {
     displayName = 'User';
     email = '';
+    uid = '';
     fullName = null;
     profileImageUrl = null;
   }
