@@ -91,23 +91,24 @@ class _CircleScreenState extends State<CircleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return DefaultTabController(
       length: 2,
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: Theme.of(context).primaryColor,
+          backgroundColor: theme.primaryColor,
           elevation: 0,
-          title: const Text(
-            "Safety Circle",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-          bottom: const TabBar(
+          title: null, // Title removed as requested
+          centerTitle: true,
+          bottom: TabBar(
             indicatorColor: Colors.white,
             indicatorWeight: 3,
-            labelStyle: TextStyle(fontWeight: FontWeight.bold),
-            unselectedLabelStyle: TextStyle(fontWeight: FontWeight.normal),
-            tabs: [
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white.withOpacity(0.7),
+            labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
+            tabs: const [
               Tab(text: "My Contacts", icon: Icon(Icons.people_alt_rounded)),
               Tab(text: "SOS Alerts", icon: Icon(Icons.warning_amber_rounded)),
             ],
@@ -161,10 +162,11 @@ class _CircleScreenState extends State<CircleScreen> {
   }
 
   Widget _buildSearchSection() {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor.withOpacity(0.05),
+        color: theme.primaryColor.withOpacity(0.05),
         border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2))),
       ),
       child: Column(
@@ -174,11 +176,13 @@ class _CircleScreenState extends State<CircleScreen> {
               Expanded(
                 child: TextField(
                   controller: _searchController,
+                  style: TextStyle(color: theme.colorScheme.onSurface),
                   decoration: InputDecoration(
                     hintText: "Enter user email...",
-                    prefixIcon: const Icon(Icons.email_outlined),
+                    hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.4)),
+                    prefixIcon: Icon(Icons.email_outlined, color: theme.colorScheme.onSurface.withOpacity(0.6)),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: theme.brightness == Brightness.light ? Colors.white : Colors.white.withOpacity(0.05),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -190,7 +194,7 @@ class _CircleScreenState extends State<CircleScreen> {
               const SizedBox(width: 12),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
+                  backgroundColor: theme.primaryColor,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
                 ),
@@ -206,7 +210,7 @@ class _CircleScreenState extends State<CircleScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.cardColor,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.green.withOpacity(0.5)),
                 boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
@@ -214,15 +218,15 @@ class _CircleScreenState extends State<CircleScreen> {
               child: Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                    child: Text(_foundUser!['fullName'][0].toUpperCase()),
+                    backgroundColor: theme.primaryColor.withOpacity(0.1),
+                    child: Text(_foundUser!['fullName'][0].toUpperCase(), style: TextStyle(color: theme.primaryColor)),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(_foundUser!['fullName'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(_foundUser!['fullName'], style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
                         Text(_foundUser!['email'], style: const TextStyle(fontSize: 12, color: Colors.grey)),
                       ],
                     ),

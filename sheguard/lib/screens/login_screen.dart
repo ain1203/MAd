@@ -382,6 +382,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _buildWelcomeText() {
+    final theme = Theme.of(context);
     return Column(
       children: [
         Text(
@@ -390,7 +391,7 @@ class _LoginScreenState extends State<LoginScreen>
           style: TextStyle(
             fontSize: 26,
             fontWeight: FontWeight.w800,
-            color: Colors.grey[900],
+            color: theme.colorScheme.onSurface,
             letterSpacing: 0.2,
           ),
         ),
@@ -400,7 +401,7 @@ class _LoginScreenState extends State<LoginScreen>
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 14,
-            color: Colors.grey[500],
+            color: theme.colorScheme.onSurface.withOpacity(0.6),
             height: 1.45,
           ),
         ),
@@ -427,6 +428,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   Widget _toggleButton(String label, int index) {
     final bool active = _selectedTab == index;
+    final theme = Theme.of(context);
     return Expanded(
       child: GestureDetector(
         onTap: () => _toggleTab(index),
@@ -452,7 +454,7 @@ class _LoginScreenState extends State<LoginScreen>
             style: TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 14,
-              color: active ? _primary : Colors.grey[500],
+              color: active ? _primary : theme.colorScheme.onSurface.withOpacity(0.5),
             ),
           ),
         ),
@@ -466,7 +468,7 @@ class _LoginScreenState extends State<LoginScreen>
       style: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w600,
-        color: Colors.grey[700],
+        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
         letterSpacing: 0.2,
       ),
     );

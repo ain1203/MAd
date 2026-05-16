@@ -17,6 +17,7 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
   Color get _primary => Theme.of(context).primaryColor;
   Color get _textDark => Theme.of(context).colorScheme.onSurface;
   Color get _textMuted => Theme.of(context).colorScheme.onSurface.withOpacity(0.6);
+  bool get isDark => Theme.of(context).brightness == Brightness.dark;
   static const Color _activeRed     = Color(0xFFE53935);
   static const Color _resolvedGreen = Color(0xFF43A047);
 
@@ -33,7 +34,6 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _buildAppBar(),
@@ -219,8 +219,8 @@ class _AlertsHistoryScreenState extends State<AlertsHistoryScreen> {
               child: ElevatedButton(
                 onPressed: isActive ? () => _resolveAlert(id) : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isActive ? _primary : Colors.grey.shade100,
-                  foregroundColor: isActive ? Colors.white : _textMuted,
+                  backgroundColor: isActive ? _primary : (isDark ? Colors.white10 : Colors.grey.shade100),
+                  foregroundColor: isActive ? Colors.white : (isDark ? Colors.white38 : _textMuted),
                   elevation: 0,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),

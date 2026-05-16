@@ -157,19 +157,19 @@ class _SafetyTipsScreenState extends State<SafetyTipsScreen> {
                             children: [
                               Text(
                                 tip.title,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w800,
-                                  color: Color(0xFF212121),
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                               const SizedBox(height: 6),
                               Text(
                                 tip.description,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
                                   height: 1.4,
-                                  color: Color(0xFF757575),
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                 ),
                               ),
                             ],

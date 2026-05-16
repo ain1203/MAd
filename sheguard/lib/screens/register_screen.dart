@@ -240,12 +240,12 @@ class _RegisterScreenState extends State<RegisterScreen>
 
           const SizedBox(height: 20),
 
-          const Text(
+          Text(
             'Start Your Journey',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: Theme.of(context).colorScheme.onSurface,
               letterSpacing: 0.2,
             ),
           ),
@@ -270,15 +270,16 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   // ── Main Card ───────────────────────────────────────────────────────────────
   Widget _buildCard() {
+    final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFEEEEEE), width: 1.2),
+        border: Border.all(color: theme.dividerColor.withOpacity(0.1), width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(theme.brightness == Brightness.dark ? 0.3 : 0.05),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -351,7 +352,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             style: TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 14,
-              color: active ? _primary : Colors.grey[500],
+              color: active ? _primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             ),
           ),
         ),
@@ -433,10 +434,10 @@ class _RegisterScreenState extends State<RegisterScreen>
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
@@ -445,7 +446,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           keyboardType: keyboardType,
           textCapitalization: textCapitalization,
           validator: validator,
-          style: const TextStyle(fontSize: 14, color: Colors.black87),
+          style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
           decoration: _fieldDecoration(hint: hint, prefixIcon: prefixIcon),
         ),
       ],
@@ -466,10 +467,10 @@ class _RegisterScreenState extends State<RegisterScreen>
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),

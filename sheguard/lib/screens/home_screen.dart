@@ -4,11 +4,11 @@ import 'package:flutter/services.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/user_session.dart';
 import '../services/alert_service.dart';
-import '../services/contact_service.dart';
 import '../services/theme_provider.dart';
 import '../theme/app_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // Import all screens
 import 'safety_bot_screen.dart';
@@ -17,23 +17,10 @@ import 'alerts_history_screen.dart';
 import 'safety_tips_screen.dart';
 import 'fake_call_screen.dart';
 import 'profile_screen.dart';
+import 'chat_users_screen.dart';
 
 import '../services/panic_shake_service.dart';
 import 'incoming_call_screen.dart';
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  SafeHer – Brand tokens
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  Emergency Contact model
-// ─────────────────────────────────────────────────────────────────────────────
-class EmergencyContact {
-  final String name;
-  final String phone;
-  final Color avatarColor;
-  EmergencyContact({required this.name, required this.phone, required this.avatarColor});
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  HomeScreen (Main Wrapper)
@@ -65,15 +52,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _handleShakeTrigger() async {
     if (!mounted) return;
-
-    // 1. Immediately trigger Fake Call as a distraction
     await _triggerFakeCallDistraction();
-
-    // 2. Show the SOS triggered message AFTER the call screen is closed
-    // Small delay ensures the pop transition is complete and HomeScreen is visible
     await Future.delayed(const Duration(milliseconds: 600));
-
-    // Only if the user is currently on the Home tab
     if (mounted && _selectedNavIndex == 0) {
       _showShakeSosDialog();
     }
@@ -82,13 +62,12 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showShakeSosDialog() {
     showDialog(
       context: context,
-      barrierDismissible: true, // Allow tapping outside to dismiss since it's just info now
+      barrierDismissible: true,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('🚨 SOS Triggered',
             style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
-        content: const Text(
-            'We have sent your location to your contacts.'),
+        content: const Text('We have sent your location to your contacts.'),
         actions: [
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: SafeHerColors.primary),
@@ -101,7 +80,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _triggerFakeCallDistraction() async {
-    // Navigate to Incoming Call Screen with a default "Mom" caller
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -114,7 +92,71 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // List of tabs
+  void _showProfileDialog() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final bool isDark = themeProvider.isDarkMode;
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            CircleAvatar(
+                radius: 44,
+                backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                backgroundImage: UserSession.profileImageUrl != null
+                    ? NetworkImage(UserSession.profileImageUrl!)
+                    : null,
+                child: UserSession.profileImageUrl == null
+                    ? Text(UserSession.displayName[0].toUpperCase(),
+                        style: TextStyle(color: Theme.of(context).primaryColor, fontSize: 32, fontWeight: FontWeight.bold))
+                    : null),
+            const SizedBox(height: 16),
+            Text(UserSession.displayName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+            Text(UserSession.email, style: const TextStyle(fontSize: 13, color: SafeHerColors.textMuted)),
+            const SizedBox(height: 24),
+            _profileAction(
+                icon: Icons.person_outline_rounded,
+                label: 'My Profile',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+                }),
+            _profileAction(
+                icon: isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                label: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+                onTap: () {
+                  themeProvider.toggleTheme();
+                  Navigator.pop(context);
+                }),
+            const Divider(height: 32),
+            _profileAction(
+                icon: Icons.logout_rounded,
+                label: 'Logout',
+                color: SafeHerColors.emergencyRed,
+                onTap: () async {
+                  await FirebaseAuthService().signOut();
+                  UserSession.clearSession();
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _profileAction({required IconData icon, required String label, required VoidCallback onTap, Color? color}) {
+    return ListTile(
+        leading: Icon(icon, color: color ?? Theme.of(context).primaryColor, size: 22),
+        title: Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: color)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+        onTap: onTap,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)));
+  }
+
   final List<Widget> _tabs = [
     const HomeTabContent(),
     const ChatbotPage(),
@@ -130,7 +172,38 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: theme.appBarTheme.backgroundColor,
+        centerTitle: true,
+        leading: IconButton(
+          icon: CircleAvatar(
+            radius: 16,
+            backgroundColor: SafeHerColors.primaryLight,
+            child: Text(UserSession.displayName[0].toUpperCase(),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+          ),
+          onPressed: _showProfileDialog,
+        ),
+        title: Text(
+          'SafeHer',
+          style: TextStyle(
+            color: theme.appBarTheme.foregroundColor ?? Colors.white,
+            fontWeight: FontWeight.w900,
+            fontSize: 20,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.forum_rounded, color: theme.appBarTheme.foregroundColor ?? Colors.white),
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatUsersScreen()));
+            },
+          ),
+        ],
+      ),
       body: IndexedStack(
         index: _selectedNavIndex,
         children: _tabs,
@@ -140,9 +213,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBottomNav() {
+    final theme = Theme.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.bottomNavigationBarTheme.backgroundColor,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.08),
@@ -155,21 +229,17 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _selectedNavIndex,
         onTap: _onNavTap,
         type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: SafeHerColors.primary,
-        unselectedItemColor: Colors.grey.shade400,
+        backgroundColor: theme.bottomNavigationBarTheme.backgroundColor,
+        selectedItemColor: theme.bottomNavigationBarTheme.selectedItemColor,
+        unselectedItemColor: theme.bottomNavigationBarTheme.unselectedItemColor,
         selectedFontSize: 11,
         unselectedFontSize: 11,
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700),
         items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.home_rounded), label: 'Home'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_rounded), label: 'Chatbot'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.group_rounded), label: 'Circle'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.notifications_rounded), label: 'Alerts'),
+          BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_rounded), label: 'Chatbot'),
+          BottomNavigationBarItem(icon: Icon(Icons.group_rounded), label: 'Circle'),
+          BottomNavigationBarItem(icon: Icon(Icons.notifications_rounded), label: 'Alerts'),
         ],
       ),
     );
@@ -177,7 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  HomeTabContent (Extracted from old HomeScreen)
+//  HomeTabContent (Fixed Helplines Directory)
 // ─────────────────────────────────────────────────────────────────────────────
 class HomeTabContent extends StatefulWidget {
   const HomeTabContent({super.key});
@@ -195,15 +265,28 @@ class _HomeTabContentState extends State<HomeTabContent>
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
-  // Replaced local list with Firestore stream
-
   static const List<Color> _palette = [
-    Color(0xFF7B1FA2),
-    Color(0xFFAD1457),
-    Color(0xFF1565C0),
-    Color(0xFF2E7D32),
-    Color(0xFFE65100),
-    Color(0xFF00838F),
+    Color(0xFF7B1FA2), Color(0xFFAD1457), Color(0xFF1565C0),
+    Color(0xFF2E7D32), Color(0xFFE65100), Color(0xFF00838F),
+  ];
+
+  final List<Map<String, String>> _helplines = [
+    {"name": "Ambulance", "number": "115"},
+    {"name": "Police Emergency", "number": "15"},
+    {"name": "Child Protection", "number": "1121"},
+    {"name": "Rescue 1122", "number": "04299231701"},
+    {"name": "Firefighting", "number": "16"},
+    {"name": "PM Youth Loan", "number": "080077000"},
+    {"name": "Zimmedar Shehri", "number": "080002345"},
+    {"name": "Punjab Youth Line", "number": "080012145"},
+    {"name": "PDMA", "number": "1129"},
+    {"name": "Punjab Health Line", "number": "080099000"},
+    {"name": "Livestock", "number": "080078686"},
+    {"name": "Punjab Women Helpline", "number": "1043"},
+    {"name": "Edhi Ambulance", "number": "04237847050"},
+    {"name": "Halal-e-Ahmar", "number": "1030"},
+    {"name": "Dastak Crisis Centre", "number": "04235763237"},
+    {"name": "Madadgaar Helpline", "number": "1098"},
   ];
 
   @override
@@ -225,7 +308,52 @@ class _HomeTabContentState extends State<HomeTabContent>
     super.dispose();
   }
 
-  // ── SOS ───────────────────────────────────────────────────────────────────
+  Future<void> _makeCall(String number) async {
+    final Uri url = Uri.parse("tel:$number");
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Could not launch dialer")),
+        );
+      }
+    }
+  }
+
+  void _showHelplineDialog(String name, String number) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.contact_phone, size: 48, color: SafeHerColors.primary),
+            const SizedBox(height: 16),
+            Text(number, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: SafeHerColors.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              _makeCall(number);
+            },
+            icon: const Icon(Icons.call, color: Colors.white),
+            label: const Text('Call Now', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _onSosLongPressStart(LongPressStartDetails _) {
     setState(() { _sosHolding = true; _sosProgress = 0.0; });
     _sosTimer = Timer.periodic(const Duration(milliseconds: 50), (t) {
@@ -237,7 +365,6 @@ class _HomeTabContentState extends State<HomeTabContent>
           _sosHolding = false;
           t.cancel();
           HapticFeedback.heavyImpact();
-          // Trigger the unified emergency alert
           AlertService.sendAlert("SOS");
           _showSosDialog();
         }
@@ -256,10 +383,8 @@ class _HomeTabContentState extends State<HomeTabContent>
       barrierDismissible: true,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('🚨 SOS Triggered',
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
-        content: const Text(
-            'We have sent your location to your contacts.'),
+        title: const Text('🚨 SOS Triggered', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+        content: const Text('We have sent your location to your contacts.'),
         actions: [
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: SafeHerColors.primary),
@@ -274,415 +399,20 @@ class _HomeTabContentState extends State<HomeTabContent>
     );
   }
 
-  // ── Add Contact ────────────────────────────────────────────────────────────
-  void _showAddContactSheet() {
-    final nameCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-          top: 24, left: 24, right: 24,
-        ),
-        child: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Add Emergency Contact', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: nameCtrl,
-                decoration: InputDecoration(
-                  labelText: 'Name',
-                  prefixIcon: const Icon(Icons.person_outline),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                validator: (v) => v!.isEmpty ? 'Enter name' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: phoneCtrl,
-                keyboardType: TextInputType.phone,
-                decoration: InputDecoration(
-                  labelText: 'Phone Number',
-                  prefixIcon: const Icon(Icons.phone_outlined),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                validator: (v) => v!.isEmpty ? 'Enter phone' : null,
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: SafeHerColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  onPressed: () {
-                    if (formKey.currentState?.validate() ?? false) {
-                      ContactService.addEmergencyContact(
-                        nameCtrl.text.trim(),
-                        phoneCtrl.text.trim(),
-                      );
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: const Text('Save Contact', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showManageContactsSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.only(top: 12),
-        height: MediaQuery.of(context).size.height * 0.6,
-        child: Column(
-          children: [
-            Container(
-              width: 40, height: 4,
-              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
-            ),
-            const SizedBox(height: 20),
-            const Text('Manage Emergency Contacts', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: ContactService.getEmergencyStream(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
-                  if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-                  final docs = snapshot.data!.docs;
-                  if (docs.isEmpty) return const Center(child: Text('No contacts to manage'));
-
-                  return ListView.builder(
-                    itemCount: docs.length,
-                    itemBuilder: (context, index) {
-                      final data = docs[index].data() as Map<String, dynamic>;
-                      final docId = docs[index].id;
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: SafeHerColors.primary.withOpacity(0.1),
-                          child: Text(data['name']?[0] ?? '?', style: const TextStyle(color: SafeHerColors.primary)),
-                        ),
-                        title: Text(data['name'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text(data['phone'] ?? ''),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit_outlined, color: Colors.blue),
-                              onPressed: () => _showEditContactSheet(docId, data['name'], data['phone']),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.red),
-                              onPressed: () {
-                                _showDeleteConfirmation(docId);
-                              },
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showEditContactSheet(String id, String initialName, String initialPhone) {
-    final nameCtrl = TextEditingController(text: initialName);
-    final phoneCtrl = TextEditingController(text: initialPhone);
-    final formKey = GlobalKey<FormState>();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-          top: 24, left: 24, right: 24,
-        ),
-        child: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Edit Contact', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: nameCtrl,
-                decoration: InputDecoration(
-                  labelText: 'Name',
-                  prefixIcon: const Icon(Icons.person_outline),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                validator: (v) => v!.isEmpty ? 'Enter name' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: phoneCtrl,
-                keyboardType: TextInputType.phone,
-                decoration: InputDecoration(
-                  labelText: 'Phone Number',
-                  prefixIcon: const Icon(Icons.phone_outlined),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                validator: (v) => v!.isEmpty ? 'Enter phone' : null,
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: SafeHerColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  onPressed: () {
-                    if (formKey.currentState?.validate() ?? false) {
-                      ContactService.updateEmergencyContact(id, nameCtrl.text.trim(), phoneCtrl.text.trim());
-                      Navigator.pop(context); // Close edit sheet
-                    }
-                  },
-                  child: const Text('Update Contact', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showDeleteConfirmation(String id) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Contact'),
-        content: const Text('Are you sure you want to delete this contact?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () {
-              ContactService.deleteEmergencyContact(id);
-              Navigator.pop(context);
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _sheetField({
-    required TextEditingController ctrl,
-    required String hint,
-    required IconData icon,
-    required TextInputType keyboard,
-    required String? Function(String?) validator,
-    TextCapitalization caps = TextCapitalization.none,
-  }) {
-    return TextFormField(
-      controller: ctrl,
-      keyboardType: keyboard,
-      textCapitalization: caps,
-      validator: validator,
-      style: const TextStyle(fontSize: 14, color: SafeHerColors.textDark),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(fontSize: 13, color: Color(0xFFBDBDBD)),
-        filled: true,
-        fillColor: const Color(0xFFF5F5F5),
-        prefixIcon: Icon(icon, size: 20, color: SafeHerColors.textMuted),
-        contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: SafeHerColors.primary, width: 1.5)),
-        errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.redAccent, width: 1.2)),
-        focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.redAccent, width: 1.5)),
-      ),
-    );
-  }
-
-  void _showProfileDialog() {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    final bool isDark = themeProvider.isDarkMode;
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        backgroundColor: Theme.of(context).cardColor,
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 10),
-            CircleAvatar(
-              radius: 44,
-              backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-              backgroundImage: UserSession.profileImageUrl != null
-                  ? NetworkImage(UserSession.profileImageUrl!)
-                  : null,
-              child: UserSession.profileImageUrl == null
-                  ? Text(UserSession.displayName[0].toUpperCase(),
-                      style: TextStyle(color: Theme.of(context).primaryColor, fontSize: 32, fontWeight: FontWeight.bold))
-                  : null,
-            ),
-            const SizedBox(height: 16),
-            Text(UserSession.displayName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-            Text(UserSession.email, style: const TextStyle(fontSize: 13, color: SafeHerColors.textMuted)),
-            const SizedBox(height: 24),
-            
-            // My Profile Button
-            _profileAction(
-              icon: Icons.person_outline_rounded,
-              label: 'My Profile',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
-              },
-            ),
-            
-            // Theme Toggle
-            _profileAction(
-              icon: isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-              label: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
-              onTap: () {
-                themeProvider.toggleTheme();
-                Navigator.pop(context);
-              },
-            ),
-            
-            const Divider(height: 32),
-            
-            // Logout Button
-            _profileAction(
-              icon: Icons.logout_rounded,
-              label: 'Logout',
-              color: SafeHerColors.emergencyRed,
-              onTap: () async {
-                await FirebaseAuthService().signOut();
-                UserSession.clearSession();
-                if (!mounted) return;
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Logged out successfully'), backgroundColor: SafeHerColors.primary),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _profileAction({required IconData icon, required String label, required VoidCallback onTap, Color? color}) {
-    return ListTile(
-      leading: Icon(icon, color: color ?? Theme.of(context).primaryColor, size: 22),
-      title: Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: color)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-      onTap: onTap,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.only(bottom: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(),
-              _buildSosSection(),
-              _buildTapHint(),
-              _buildQuickActions(),
-              _buildSectionTitle(
-                'Emergency Contacts', 
-                trailingLabel: 'Edit',
-                onTrailingTap: _showManageContactsSheet,
-              ),
-              _buildEmergencyContacts(),
-              _buildDailyTip(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-      child: Row(
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('SafeHer',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: SafeHerColors.primary)),
-                Text('Welcome, ${UserSession.displayName}',
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: SafeHerColors.textDark)),
-              ],
-            ),
-          ),
-          GestureDetector(
-            onTap: _showProfileDialog,
-            child: CircleAvatar(
-              radius: 21,
-              backgroundColor: SafeHerColors.primaryLight,
-              child: Text(UserSession.displayName[0].toUpperCase(),
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ),
+          _buildSosSection(),
+          _buildTapHint(),
+          _buildQuickActions(),
+          _buildSectionTitle('Govt Helplines'),
+          _buildHelplinesDirectory(),
+          _buildDailyTip(),
         ],
       ),
     );
@@ -697,10 +427,7 @@ class _HomeTabContentState extends State<HomeTabContent>
           onLongPressEnd: _onSosLongPressEnd,
           child: AnimatedBuilder(
             animation: _pulseAnimation,
-            builder: (_, child) => Transform.scale(
-              scale: _sosHolding ? 1.0 : _pulseAnimation.value,
-              child: child,
-            ),
+            builder: (_, child) => Transform.scale(scale: _sosHolding ? 1.0 : _pulseAnimation.value, child: child),
             child: SizedBox(
               width: 170, height: 170,
               child: Stack(
@@ -708,47 +435,14 @@ class _HomeTabContentState extends State<HomeTabContent>
                 children: [
                   Container(
                     width: 170, height: 170,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(colors: [
-                        Theme.of(context).primaryColor.withOpacity(0.25),
-                        Theme.of(context).primaryColor.withOpacity(0.0),
-                      ]),
-                    ),
+                    decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [Theme.of(context).primaryColor.withOpacity(0.25), Theme.of(context).primaryColor.withOpacity(0.0)])),
                   ),
                   Container(
                     width: 145, height: 145,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          Theme.of(context).colorScheme.secondary,
-                          Theme.of(context).primaryColor,
-                          Theme.of(context).primaryColorDark,
-                        ],
-                      ),
-                      boxShadow: [
-                        BoxShadow(color: Theme.of(context).primaryColor.withOpacity(0.55), blurRadius: 30, spreadRadius: 4),
-                      ],
-                    ),
-                    child: const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('SOS', style: TextStyle(color: Colors.white, fontSize: 44, fontWeight: FontWeight.w900)),
-                        Text('HOLD 3 SEC', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
-                      ],
-                    ),
+                    decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [Theme.of(context).colorScheme.secondary, Theme.of(context).primaryColor, Theme.of(context).primaryColorDark]), boxShadow: [BoxShadow(color: Theme.of(context).primaryColor.withOpacity(0.55), blurRadius: 30, spreadRadius: 4)]),
+                    child: const Column(mainAxisAlignment: MainAxisAlignment.center, children: [Text('SOS', style: TextStyle(color: Colors.white, fontSize: 44, fontWeight: FontWeight.w900)), Text('HOLD 3 SEC', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600))]),
                   ),
-                  if (_sosHolding)
-                    SizedBox(
-                      width: 145, height: 145,
-                      child: CircularProgressIndicator(
-                        value: _sosProgress,
-                        strokeWidth: 4,
-                        color: SafeHerColors.sosPink,
-                        backgroundColor: Colors.white.withOpacity(0.2),
-                      ),
-                    ),
+                  if (_sosHolding) SizedBox(width: 145, height: 145, child: CircularProgressIndicator(value: _sosProgress, strokeWidth: 4, color: SafeHerColors.sosPink, backgroundColor: Colors.white.withOpacity(0.2))),
                 ],
               ),
             ),
@@ -761,11 +455,7 @@ class _HomeTabContentState extends State<HomeTabContent>
   Widget _buildTapHint() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40),
-      child: Text(
-        'Tap and hold in case of emergency. Your location will be shared instantly.',
-        textAlign: TextAlign.center,
-        style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13, height: 1.5),
-      ),
+      child: Text('Tap and hold in case of emergency. Your location will be shared instantly.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13, height: 1.5)),
     );
   }
 
@@ -775,12 +465,8 @@ class _HomeTabContentState extends State<HomeTabContent>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _quickActionItem(Icons.phone_callback_rounded, 'Fake Call', Colors.blue, () {
-             Navigator.push(context, MaterialPageRoute(builder: (_) => const FakeCallScreen()));
-          }),
-          _quickActionItem(Icons.shield_outlined, 'Safety Tips', Colors.orange, () {
-             Navigator.push(context, MaterialPageRoute(builder: (_) => const SafetyTipsScreen()));
-          }),
+          _quickActionItem(Icons.phone_callback_rounded, 'Fake Call', Colors.blue, () { Navigator.push(context, MaterialPageRoute(builder: (_) => const FakeCallScreen())); }),
+          _quickActionItem(Icons.shield_outlined, 'Safety Tips', Colors.orange, () { Navigator.push(context, MaterialPageRoute(builder: (_) => const SafetyTipsScreen())); }),
         ],
       ),
     );
@@ -791,118 +477,58 @@ class _HomeTabContentState extends State<HomeTabContent>
       onTap: onTap,
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, color: color, size: 24),
-          ),
+          Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: color, size: 24)),
           const SizedBox(height: 8),
-          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
         ],
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title, {String? trailingLabel, VoidCallback? onTrailingTap}) {
+  Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface)),
-          if (trailingLabel != null)
-            GestureDetector(
-              onTap: onTrailingTap,
-              child: Text(trailingLabel, style: TextStyle(fontSize: 13, color: Theme.of(context).primaryColor, fontWeight: FontWeight.w600))
-            ),
-        ],
-      ),
+      child: Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface)),
     );
   }
 
-  Widget _buildEmergencyContacts() {
+  Widget _buildHelplinesDirectory() {
     return SizedBox(
-      height: 94,
-      child: StreamBuilder<QuerySnapshot>(
-        stream: ContactService.getEmergencyStream(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            debugPrint("❌ Firestore Stream Error: ${snapshot.error}");
-            return const Center(child: Icon(Icons.error_outline, color: Colors.red, size: 20));
-          }
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Padding(
-              padding: EdgeInsets.only(left: 20),
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            );
-          }
-
-          final docs = snapshot.data?.docs ?? [];
-          
-          if (docs.isEmpty) {
-             return ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [_buildAddContactButton()],
-            );
-          }
-
-          return ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [
-              _buildAddContactButton(),
-              ...docs.asMap().entries.map((entry) {
-                final data = entry.value.data() as Map<String, dynamic>;
-                return _buildContactAvatar(
-                  data['name'] ?? 'User',
-                  _palette[entry.key % _palette.length],
-                );
-              }),
-            ],
-          );
+      height: 110,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _helplines.length,
+        itemBuilder: (context, index) {
+          final helpline = _helplines[index];
+          return _buildHelplineCard(helpline['name']!, helpline['number']!, _palette[index % _palette.length]);
         },
       ),
     );
   }
 
-  Widget _buildAddContactButton() {
+  Widget _buildHelplineCard(String name, String number, Color color) {
     return GestureDetector(
-      onTap: _showAddContactSheet,
-      child: Padding(
-        padding: const EdgeInsets.only(right: 16),
+      onTap: () => _showHelplineDialog(name, number),
+      child: Container(
+        width: 140,
+        margin: const EdgeInsets.only(right: 12, bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 4))],
+        ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 52, height: 52,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle, 
-                border: Border.all(color: Theme.of(context).primaryColor.withOpacity(0.4), width: 2), 
-                color: Theme.of(context).primaryColor.withOpacity(0.1)
-              ),
-              child: Icon(Icons.add, color: Theme.of(context).primaryColor),
-            ),
-            const SizedBox(height: 6),
-            Text('Add', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
+            Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: Icon(Icons.emergency_outlined, color: color, size: 18)),
+            const SizedBox(height: 8),
+            Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+            Text(number, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontWeight: FontWeight.w500)),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildContactAvatar(String name, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 16),
-      child: Column(
-        children: [
-          CircleAvatar(
-              radius: 26,
-              backgroundColor: color,
-              child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
-                  style: const TextStyle(color: Colors.white))),
-          const SizedBox(height: 6),
-          Text(name, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8))),
-        ],
       ),
     );
   }
@@ -910,20 +536,8 @@ class _HomeTabContentState extends State<HomeTabContent>
   Widget _buildDailyTip() {
     return Padding(
       padding: const EdgeInsets.all(20),
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          gradient: const LinearGradient(colors: [Color(0xFF6A1B9A), Color(0xFF8E24AA)]),
-        ),
-        child: const Row(
-          children: [
-            Icon(Icons.lightbulb_rounded, color: Colors.amber),
-            SizedBox(width: 14),
-            Expanded(child: Text('Keep your phone charged and location services on while traveling.', style: TextStyle(color: Colors.white, fontSize: 13))),
-          ],
-        ),
-      ),
+      child: Container(padding: const EdgeInsets.all(18), decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), gradient: const LinearGradient(colors: [Color(0xFF6A1B9A), Color(0xFF8E24AA)])), child: const Row(children: [Icon(Icons.lightbulb_rounded, color: Colors.amber), SizedBox(width: 14), Expanded(child: Text('Keep your phone charged and location services on while traveling.', style: TextStyle(color: Colors.white, fontSize: 13)))]),
+    ),
     );
   }
 }
