@@ -42,6 +42,7 @@ class ChatService {
     final messageData = {
       'chatId': chatId,
       'senderId': _currentUid,
+      'receiverId': otherUid,
       'type': 'text',
       'text': text,
       'timestamp': FieldValue.serverTimestamp(),

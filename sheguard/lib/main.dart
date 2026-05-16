@@ -12,6 +12,7 @@ import 'services/theme_provider.dart';
 // Services
 import 'services/firebase_auth_service.dart';
 import 'services/user_session.dart';
+import 'services/notification_service.dart';
 
 // Screens
 import 'screens/splash_screen.dart';
@@ -35,6 +36,7 @@ Future<void> main() async {
     
     // Background services
     await AndroidAlarmManager.initialize();
+    await NotificationService.initialize();
   } catch (e) {
     debugPrint("🚨 Initialization error: $e");
   }
@@ -115,5 +117,8 @@ class AuthWrapper extends StatelessWidget {
     if (user.photoURL != null) {
       UserSession.setProfileImage(user.photoURL!);
     }
+    
+    // Start listening for notifications
+    NotificationService.startListening(SafeHerApp.navigatorKey.currentContext!);
   }
 }
